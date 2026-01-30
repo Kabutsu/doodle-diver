@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import kaplay, { GameObj } from 'kaplay';
 import { submitScore } from '@/app/_helpers/submit-score';
+import { bubblesController } from '@/app/_hooks/bubble-spawn';
 
 const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -16,11 +17,24 @@ const GameCanvas = () => {
         height: window.innerHeight,
       });
 
-      const { add, rect, pos, onKeyDown, onUpdate, width, height, text, fixed, setCamPos } = k;
+      const {
+        add,
+        rect,
+        pos,
+        area,
+        onKeyDown,
+        onUpdate,
+        width,
+        height,
+        text,
+        fixed,
+        setCamPos,
+      } = k;
 
       const player = add([
         rect(26, 34),
         pos(width() / 2, 34),
+        area(),
         'player'
       ]);
 
@@ -59,10 +73,12 @@ const GameCanvas = () => {
         if (isGameOver) location.reload();
       });
 
-      async function handleGameOver() {
+      async function handleGameOver(...callbacks: Array<() => void>) {
         if (isGameOver) return;
         isGameOver = true;
         oxygen = 0;
+
+        callbacks.forEach((callback) => callback());
 
         const finalDepth = Math.floor(depth);
         const runTimeMs = Math.round(performance.now() - startTime);
@@ -131,12 +147,14 @@ const GameCanvas = () => {
         }
       }
 
-      onUpdate(() => {
-        const dt = k.dt();
+      const { cleanupBubbles } = bubblesController({ k, player });
 
+      onUpdate(() => {
         if (isGameOver) {
           return;
         }
+
+        const dt = k.dt();
 
         player.move(0, fallSpeed * dt);
         depth += fallSpeed * dt;
@@ -153,13 +171,15 @@ const GameCanvas = () => {
           oxygen = 0;
           oxygenLabel.text= 'O2: 0%';
 
-          void handleGameOver();
+          void handleGameOver(cleanupBubbles);
         }
       });
 
       cleanup = () => {
+        cleanupBubbles();
         k.destroyAll('player');
       };
+
       cleanupRef.current = cleanup;
     })();
 
