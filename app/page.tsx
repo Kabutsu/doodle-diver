@@ -1,65 +1,201 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useRef } from 'react';
+import kaplay, { GameObj } from 'kaplay';
+import { submitScore } from '@/app/_helpers/submit-score';
+
+export default function Page() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rawGameKey =
+    typeof module !== 'undefined' && (module as unknown as { hot?: { data?: { gameKey?: number } } }).hot?.data?.gameKey;
+  const gameKey: number = typeof rawGameKey === 'number' ? rawGameKey : 0;
+  const cleanupRef = useRef<(() => void) | undefined>(undefined);
+
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+
+    if (typeof module !== 'undefined') {
+      const hot = (module as unknown as { hot?: { accept: () => void; data: { gameKey?: number }; dispose: (cb: () => void) => void } }).hot;
+      if (hot) {
+        hot.dispose(() => {
+          cleanupRef.current?.();
+          hot.data.gameKey = (hot.data.gameKey || 0) + 1;
+        });
+        hot.accept();
+      }
+    }
+
+    (async () => {
+      const k = kaplay({
+        canvas: canvasRef.current!,
+        width: 480,
+        height: 720,
+        // clearColor: [0, 0.05, 0.12]
+      });
+
+      const { add, rect, pos, onKeyDown, onUpdate, width, height, text, fixed, setCamPos } = k;
+
+      const player = add([
+        rect(26, 34),
+        pos(width() / 2, 100),
+        'player'
+      ]);
+
+      const fallSpeed = 15;
+      const horizSpeed = 220;
+      const depletionSpeed = 5;
+
+      let depth = 0;
+      let oxygen = 100;
+
+      const startTime = performance.now();
+      let isGameOver = false;
+
+      const depthLabel = add([
+        text('Depth: 0m'),
+        pos(8, 8),
+        fixed()
+      ]);
+
+      const oxygenLabel = add([
+        text('O2: 100%'),
+        pos(8, 50),
+        fixed(),
+      ]);
+
+      let gameOverText: GameObj | null = null;
+      let statsText: GameObj | null = null;
+      let submitStatusText: GameObj | null = null;
+
+      onKeyDown('left', () => {
+        if (!isGameOver) player.move(-horizSpeed, 0);
+      });
+      onKeyDown('right', () => {
+        if (!isGameOver) player.move(horizSpeed, 0);
+      });
+
+      onKeyDown('enter', () => {
+        if (isGameOver) location.reload();
+      });
+
+      async function handleGameOver() {
+        if (isGameOver) return;
+        isGameOver = true;
+        oxygen = 0;
+
+        const finalDepth = Math.floor(depth);
+        const runTimeMs = Math.round(performance.now() - startTime);
+        const score = finalDepth; // treat depth as the score — adjust if you want a different metric
+
+        // Add a simple overlay (fixed so it doesn't move with camera)
+        // Positioning is approximate; adjust to taste.
+        gameOverText = add([
+          text('GAME OVER'),
+          pos(width() / 2 - 90, height() / 2 - 80),
+          fixed(),
+        ]);
+
+        statsText = add([
+          text(`Depth: ${finalDepth}m\nRuntime: ${Math.round(runTimeMs)} ms`),
+          pos(width() / 2 - 90, height() / 2 - 20),
+          fixed(),
+        ]);
+
+        submitStatusText = add([
+          text('Submitting score...'),
+          pos(width() / 2 - 90, height() / 2 + 60),
+          fixed(),
+        ]);
+
+        // prompt for player name (fallback to Anonymous if canceled)
+        let playerName: string | null = 'Anonymous';
+        try {
+          const resp = window.prompt('Enter player name for high score', 'Player');
+          playerName = resp && resp.trim().length > 0 ? resp.trim() : 'Anonymous';
+        } catch (e) {
+          playerName = 'Anonymous';
+        }
+
+        const payload = {
+          player: playerName,
+          score,
+          depth: finalDepth,
+          runTimeMs,
+        };
+
+        try {
+          const res = await submitScore(payload);
+          if (!res.ok) {
+            throw new Error(`Server returned ${res.status}`);
+          }
+
+          // Update status text
+          // remove and re-add because kaplay text nodes are immutable in many libs — replace by re-adding
+          if (submitStatusText) k.destroy(submitStatusText);
+          submitStatusText = add([
+            text('Score submitted! Press Enter to play again.'),
+            pos(width() / 2 - 140, height() / 2 + 60),
+            fixed(),
+          ]);
+        } catch (err) {
+          if (submitStatusText) k.destroy(submitStatusText);
+          submitStatusText = add([
+            text('Failed to submit score. Press Enter to retry.'),
+            pos(width() / 2 - 140, height() / 2 + 60),
+            fixed(),
+          ]);
+          // log for debugging
+          // eslint-disable-next-line no-console
+          console.error('Submit score failed', err);
+        }
+      }
+
+      onUpdate(() => {
+        const dt = k.dt();
+
+        if (isGameOver) {
+          return;
+        }
+
+        player.move(0, fallSpeed * dt);
+        depth += fallSpeed * dt;
+        oxygen -= depletionSpeed * dt;
+
+        if (player.pos.x < -20) player.pos.x = width() + 20;
+        if (player.pos.x > width() + 20) player.pos.x = -20;
+
+        depthLabel.text = `Depth: ${Math.floor(depth)}m`;
+        oxygenLabel.text = `O2: ${Math.floor(oxygen)}%`;
+        setCamPos(240, player.pos.y);
+
+        if (oxygen <= 0) {
+          oxygen = 0;
+          oxygenLabel.text= 'O2: 0%';
+
+          void handleGameOver();
+        }
+      });
+
+      cleanup = () => {
+        k.destroyAll('player');
+      };
+      cleanupRef.current = cleanup;
+    })();
+
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, [gameKey]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file!!!
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <canvas
+      key={gameKey}
+      ref={canvasRef}
+      style={{
+        display: 'block',
+        margin: '0 auto',
+        touchAction: 'none'
+      }}
+    />
   );
 }

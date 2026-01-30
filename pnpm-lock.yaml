@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@next/env':
+        specifier: ^16.1.6
+        version: 16.1.6
       '@supabase/supabase-js':
         specifier: ^2.93.3
         version: 2.93.3
