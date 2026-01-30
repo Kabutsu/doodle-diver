@@ -15,7 +15,7 @@ type Args = {
   player: GameObj<PosComp | RectComp>;
 };
 
-export function bubblesController({ k, player }: Args) {
+export default function bubblesController({ k, player }: Args) {
   const {
     add,
     circle,
@@ -92,3 +92,5 @@ export function bubblesController({ k, player }: Args) {
 
   return { cleanupBubbles };
 }
+
+export type BubbleControllerReturn = ReturnType<typeof bubblesController>;
