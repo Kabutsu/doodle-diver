@@ -1,12 +1,12 @@
 import health from '@/app/_components/logic/health';
 import { getFallSpeedMultiplier, getOxygenDrainMultiplier } from '@/app/_components/logic/depth';
 import { MASK_DEFS, type MaskType } from '@/app/_components/logic/mask/types';
-import { KAPLAYCtx } from 'kaplay';
+import { KAPLAYCtx, Key } from 'kaplay';
 
 export const PLAYER_TAG = 'player';
 
 const BASE_FALL_SPEED = 1500;
-const VERTI_SPEED = 5000;
+const VERTI_SPEED = 7500;
 const HORIZ_SPEED = 220;
 const BASE_DEPLETION = 2;
 const DEPTH_PER_PIXEL = 0.01;
@@ -15,13 +15,12 @@ const PLAYER_TARGET_POS = 0.25;
 const PLAYER_MIN_POS = 0.1;
 const PLAYER_MAX_POS = 0.4;
 
-const BOOST_UP = 280;
-const BOOST_DOWN = 450;
-const KICK_UP = 180;
-const KICK_DOWN = 200;
-const BOOST_KICK_COST = 0;
+const BOOST_COST = 7.5;
+const KICK_COST = 2.5;
 const BOOST_KICK_COOLDOWN_MS = 3500;
 const BOOST_KICK_DURATION_MS = 1000;
+const BOOST_MODIFIER = 2.5;
+const KICK_MODIFIER = 25;
 
 const BOUNCE_DECAY = 0.92;
 const MIN_OXYGEN_FOR_BOOST = 15;
@@ -53,12 +52,10 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     width,
     height,
     destroyAll,
-    isKeyDown,
     dt,
   } = k;
 
   const CENTRE_X = width() / 2;
-  const CENTRE_Y = height() / 2;
   const PLAYER_TARGET_Y = Math.round(height() * PLAYER_TARGET_POS);
 
   const player = add([
@@ -85,6 +82,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
   let boostKickCooldownUntil = 0;
   let boostKickDurationUntil = 0;
   let isBoosting = false;
+  let isKicking = false;
 
   const setBounceVy = (v: number) => {
     bounceVy = v;
@@ -99,16 +97,17 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     currentVx = v;
   };
 
-  const applyBoostOrKick = (cost: number) => {
+  const applyBoostOrKick = (cost: number, key: Key) => {
     if (player.oxygen < MIN_OXYGEN_FOR_BOOST) return;
 
     const now = performance.now();
-    if (now < boostKickCooldownUntil) return;
+    if (now < boostKickCooldownUntil || now < slowDebuffUntil) return;
   
     boostKickCooldownUntil = now + BOOST_KICK_COOLDOWN_MS;
     boostKickDurationUntil = now + BOOST_KICK_DURATION_MS;
     player.hurt(cost);
-    isBoosting = true;
+    isBoosting = key === 'space';
+    isKicking = ['up', 'down'].includes(key);
   };
 
   const getSpeedMultiplier = () => {
@@ -116,7 +115,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
       case performance.now() < slowDebuffUntil:
         return 0.5;
       case isBoosting && performance.now() < boostKickDurationUntil:
-        return 2.5;
+        return BOOST_MODIFIER;
       default:
         return 1
     }
@@ -134,15 +133,34 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
       player.move(HORIZ_SPEED * mult, 0);
     }
   });
+  onKeyDown('up', () => {
+    if (isGameOver || !isKicking) return;
+    player.move(0, -VERTI_SPEED / KICK_MODIFIER);
+  });
+  onKeyDown('down', () => {
+    if (isGameOver || !isKicking) return;
+    player.move(0, VERTI_SPEED / KICK_MODIFIER);
+  });
 
   onKeyPress('space', () => {
     if (isGameOver) return;
-    applyBoostOrKick(BOOST_KICK_COST);
+    applyBoostOrKick(BOOST_COST, 'space');
+  });
+  onKeyPress('up', () => {
+    if (isGameOver) return;
+    applyBoostOrKick(KICK_COST, 'up');
+  });
+  onKeyPress('down', () => {
+    if (isGameOver) return;
+    applyBoostOrKick(KICK_COST, 'down');
   });
 
   onKeyRelease(['left', 'right'], () => {
     isBoosting = false;
   });
+  onKeyRelease(['up', 'down'], () => {
+    isKicking = false;
+  })
 
   let lastFallSpeed = BASE_FALL_SPEED;
 
@@ -181,11 +199,15 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     if (player.pos.x < MIN_X) player.pos.x = MAX_X;
     if (player.pos.x > MAX_X) player.pos.x = MIN_X;
 
-    if (player.pos.y > PLAYER_TARGET_Y + 5) {
-      player.move(0, VERTI_SPEED * d * -1);
-    }
-    else if (player.pos.y < PLAYER_TARGET_Y - 5) {
-      player.move(0, VERTI_SPEED * d);
+    if (!isKicking) {
+      if (player.pos.y > PLAYER_TARGET_Y + 5) {
+        player.move(0, VERTI_SPEED * d * -1);
+      }
+      else if (player.pos.y < PLAYER_TARGET_Y - 5) {
+        player.move(0, VERTI_SPEED * d);
+      }
+    } else if (now >= boostKickDurationUntil) {
+      isKicking = false;
     }
 
     if (player.oxygen <= 0) {
