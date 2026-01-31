@@ -45,6 +45,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     rect,
     pos,
     area,
+    body,
     onKeyDown,
     onKeyPress,
     onKeyRelease,
@@ -63,6 +64,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     pos(CENTRE_X, height() * PLAYER_MIN_POS),
     area(),
     health(),
+    body(),
     PLAYER_TAG,
   ]);
 

@@ -1,6 +1,8 @@
-import { CircleComp, GameObj, KAPLAYCtx, PosComp, RectComp } from "kaplay";
+import { GameObj, KAPLAYCtx, PosComp, RectComp } from "kaplay";
 import { PLAYER_TAG } from "../player-controller";
 import { HealthComp } from "@/app/_components/logic/health";
+import velocity, { VelocityComp } from "@/app/_components/logic/velocity";
+import { SIDE_WALL_TAG } from "../hazard-controller";
 
 export const BUBBLE_TAG = 'bubble';
 
@@ -10,7 +12,8 @@ const COLOR = '#a6dbff';
 const MIN_TIMEOUT = 1500;
 const MAX_TIMEOUT = 5000;
 
-const SPEED_Y = 9000;
+const MIN_SPEED_Y = 4500;
+const MAX_SPEED_Y = 15000;
 
 type Args = {
   k: KAPLAYCtx;
@@ -43,6 +46,7 @@ export default function bubblesController({ k, player }: Args) {
       pos(x, y),
       color(COLOR),
       area({ collisionIgnore: undefined }),
+      velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
       BUBBLE_TAG,
     ]);
     
@@ -68,7 +72,11 @@ export default function bubblesController({ k, player }: Args) {
   onCollide(BUBBLE_TAG, PLAYER_TAG, (b, p) => {
     b.destroy();
     (p as GameObj<HealthComp>).heal(15);
-  })
+  });
+
+  onCollide(BUBBLE_TAG, SIDE_WALL_TAG, (b) => {
+    b.destroy();
+  });
 
   onUpdate(() => {
     if (bubblesCleared) {
@@ -80,13 +88,13 @@ export default function bubblesController({ k, player }: Args) {
 
     k.get(BUBBLE_TAG).forEach(
       (bubble) => {
-        const b = bubble as GameObj<PosComp | CircleComp>;
+        const b = bubble as GameObj<PosComp | VelocityComp>;
         if (b.pos.y < camTop) {
           b.tag(DESTROY);
           return;
         }
 
-        b.move(0, -SPEED_Y * dt);
+        b.move(0, b.speedY * dt);
       }
     );
 

@@ -1,7 +1,8 @@
-import { CircleComp, GameObj, KAPLAYCtx, PosComp, RectComp } from 'kaplay';
+import { GameObj, KAPLAYCtx, PosComp, RectComp } from 'kaplay';
 import { PLAYER_TAG } from '../player-controller';
 import { HealthComp } from '@/app/_components/logic/health';
 import { getDepthBand } from '@/app/_components/logic/depth';
+import velocity, { VelocityComp } from '@/app/_components/logic/velocity';
 
 export const JELLYFISH_TAG = 'jellyfish';
 export const AIR_VENT_TAG = 'airVent';
@@ -23,7 +24,8 @@ const JELLYFISH_RADIUS = 18;
 const VENT_RADIUS = 22;
 const ROCK_SIZE = 24;
 
-const SPEED_Y = 8000;
+const MIN_SPEED_Y = 8000;
+const MAX_SPEED_Y = 22500;
 
 type Args = {
   k: KAPLAYCtx;
@@ -39,7 +41,6 @@ export default function bounceController({
   player,
   getDepth,
   setBounceVy,
-  setBounceVx,
   getFallSpeed,
 }: Args) {
   const {
@@ -49,6 +50,7 @@ export default function bounceController({
     pos,
     color,
     area,
+    body,
     width,
     height,
     onCollide,
@@ -74,6 +76,8 @@ export default function bounceController({
           pos(x, spawnY),
           color(255, 200, 255),
           area(),
+          body(),
+          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
           JELLYFISH_TAG,
         ]);
       } else {
@@ -82,6 +86,8 @@ export default function bounceController({
           pos(x, spawnY),
           color(200, 230, 255),
           area(),
+          body(),
+          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
           AIR_VENT_TAG,
         ]);
       }
@@ -92,6 +98,8 @@ export default function bounceController({
           pos(x, spawnY),
           color(255, 200, 255),
           area(),
+          body({ isStatic: true }),
+          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
           JELLYFISH_TAG,
         ]);
       } else if (roll < 0.75) {
@@ -100,14 +108,18 @@ export default function bounceController({
           pos(x, spawnY),
           color(200, 230, 255),
           area(),
+          body(),
+          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
           AIR_VENT_TAG,
         ]);
       } else {
         add([
           rect(ROCK_SIZE, ROCK_SIZE),
           pos(x, spawnY),
-          color(100, 100, 110),
+          color(65, 60, 70),
           area(),
+          body({ isStatic: true }),
+          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
           SHARP_ROCK_TAG,
         ]);
       }
@@ -118,6 +130,8 @@ export default function bounceController({
           pos(x, spawnY),
           color(255, 200, 255),
           area(),
+          body({ isStatic: true }),
+          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
           JELLYFISH_TAG,
         ]);
       } else if (roll < 0.6) {
@@ -126,14 +140,18 @@ export default function bounceController({
           pos(x, spawnY),
           color(200, 230, 255),
           area(),
+          body(),
+          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
           AIR_VENT_TAG,
         ]);
       } else {
         add([
           rect(ROCK_SIZE, ROCK_SIZE),
           pos(x, spawnY),
-          color(100, 100, 110),
+          color(65, 60, 70),
           area(),
+          body({ isStatic: true }),
+          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
           SHARP_ROCK_TAG,
         ]);
       }
@@ -173,12 +191,12 @@ export default function bounceController({
     const camTop = getCamPos().y - height() / 2 - 50;
     [JELLYFISH_TAG, AIR_VENT_TAG, SHARP_ROCK_TAG].forEach((tag) => {
       k.get(tag).forEach((obj) => {
-        const o = obj as GameObj<PosComp>;
+        const o = obj as GameObj<PosComp | VelocityComp>;
         if (o.pos.y < camTop) {
           o.tag(DESTROY);
           return;
         }
-        o.move(0, -SPEED_Y * dt);
+        o.move(0, o.speedY * dt);
       });
     });
     destroyAll(DESTROY);

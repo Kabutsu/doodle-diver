@@ -2,16 +2,20 @@ import { GameObj, KAPLAYCtx, PosComp, RectComp } from 'kaplay';
 import { PLAYER_TAG } from '../player-controller';
 import { getDepthBand } from '@/app/_components/logic/depth';
 import { type MaskType, getMaskDuration } from '@/app/_components/logic/mask/types';
+import velocity, { VelocityComp } from '@/app/_components/logic/velocity';
 
 export const MASK_PICKUP_TAG = 'maskPickup';
 
 const PICKUP_SIZE = 20;
 const SPAWN_INTERVAL_MS = 12000;
 const MASK_COLORS: Record<MaskType, [number, number, number]> = {
-  pressure: [100, 150, 200],
-  rebreather: [80, 200, 120],
-  blind: [60, 60, 80],
+  pressure: [255, 100, 100],
+  rebreather: [100, 255, 100],
+  blind: [200, 200, 255],
 };
+
+const MIN_SPEED_Y = 8000;
+const MAX_SPEED_Y = 10000;
 
 export type ActiveMask = { type: MaskType; expiresAt: number } | null;
 
@@ -22,7 +26,7 @@ type Args = {
 };
 
 export default function maskController({ k, getDepth, player }: Args) {
-  const { add, rect, pos, color, area, width, height, onCollide, onUpdate, getCamPos, destroyAll } = k;
+  const { add, rect, pos, color, area, body, width, height, onCollide, onUpdate, getCamPos, destroyAll } = k;
 
   let activeMask: ActiveMask = null;
   let lastSpawnTime = performance.now();
@@ -44,6 +48,8 @@ export default function maskController({ k, getDepth, player }: Args) {
       pos(x, spawnY),
       color(...MASK_COLORS[type]),
       area(),
+      velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
+      body(),
       MASK_PICKUP_TAG,
     ]) as GameObj;
     pickupTypeMap.set(obj, type);
@@ -69,11 +75,13 @@ export default function maskController({ k, getDepth, player }: Args) {
     }
     const camTop = getCamPos().y - height() / 2 - 50;
     k.get(MASK_PICKUP_TAG).forEach((obj) => {
-      const o = obj as GameObj<PosComp>;
+      const o = obj as GameObj<PosComp | VelocityComp>;
       if (o.pos.y < camTop) {
         pickupTypeMap.delete(obj as GameObj);
         obj.destroy();
+        return;
       }
+      o.move(0, o.speedY * k.dt());
     });
   });
 

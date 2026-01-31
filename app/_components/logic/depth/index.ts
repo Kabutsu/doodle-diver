@@ -1,12 +1,17 @@
 export type DepthBand = 'early' | 'mid' | 'deep';
 
-const EARLY_MAX = 500;
-const MID_MAX = 2000;
+const EARLY_MAX = 250;
+const MID_MAX = 1250;
 
 export function getDepthBand(depth: number): DepthBand {
-  if (depth < EARLY_MAX) return 'early';
-  if (depth < MID_MAX) return 'mid';
-  return 'deep';
+  switch (true) {
+    case (depth < EARLY_MAX):
+      return 'early';
+    case (depth < MID_MAX):
+      return 'mid';
+    default:
+      return 'deep';
+  }
 }
 
 const BASE_FALL_MULT = 1;
