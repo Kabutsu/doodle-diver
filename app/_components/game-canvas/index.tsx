@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
 import kaplay from 'kaplay';
-import bubbleController, { type BubbleControllerReturn } from '@/app/_controllers/bubble-controller';
-import bounceController, { type BounceControllerReturn } from '@/app/_controllers/bounce-controller';
+import gameDirector, { type GameDirectorReturn } from '@/app/_controllers/game-director';
+import oxygenTankController from '@/app/_controllers/oxygen-tank-controller';
+import bounceController from '@/app/_controllers/bounce-controller';
 import gameOverController from '@/app/_controllers/game-over-controller';
-import hazardController, { type HazardControllerReturn } from '@/app/_controllers/hazard-controller';
+import hazardController from '@/app/_controllers/hazard-controller';
 import hudController from '@/app/_controllers/hud-controller';
 import maskController, { type MaskControllerReturn } from '@/app/_controllers/mask-controller';
 import playerController from '@/app/_controllers/player-controller';
@@ -24,10 +25,8 @@ const GameCanvas = () => {
 
       const gameOverCtrl = gameOverController({ k });
 
-      const bubbleCtrlRef: { current: BubbleControllerReturn | null } = { current: null };
-      const bounceCtrlRef: { current: BounceControllerReturn | null } = { current: null };
+      const gameDirectorRef: { current: GameDirectorReturn | null } = { current: null };
       const maskCtrlRef: { current: MaskControllerReturn | null } = { current: null };
-      const hazardCtrlRef: { current: HazardControllerReturn | null } = { current: null };
 
       const playerCtrl = playerController({
         k,
@@ -36,37 +35,41 @@ const GameCanvas = () => {
           gameOverCtrl.handleGameOver(
             { depth: state.depth, startTime: state.startTime },
             () => {
-              bubbleCtrlRef.current?.cleanupBubbles();
-              bounceCtrlRef.current?.cleanup();
-              maskCtrlRef.current?.cleanup();
-              hazardCtrlRef.current?.cleanup();
+              gameDirectorRef.current?.cleanup();
             }
           );
         },
         getActiveMask: () => maskCtrlRef.current?.getActiveMask() ?? null,
       });
 
-      bubbleCtrlRef.current = bubbleController({ k, player: playerCtrl.player });
+      // Initialize game director first (manages spawning)
+      gameDirectorRef.current = gameDirector({
+        k,
+        getDepth: () => playerCtrl.getState().depth,
+      });
+
+      // Initialize effect controllers (handle mechanics only)
       maskCtrlRef.current = maskController({
         k,
-        getDepth: () => playerCtrl.getState().depth,
-        player: playerCtrl.player,
+        gameDirector: gameDirectorRef.current,
       });
-      bounceCtrlRef.current = bounceController({
+
+      oxygenTankController({ k });
+
+      bounceController({
         k,
-        player: playerCtrl.player,
-        getDepth: () => playerCtrl.getState().depth,
         setBounceVy: playerCtrl.setBounceVy,
         setBounceVx: playerCtrl.setBounceVx,
         getFallSpeed: playerCtrl.getFallSpeed,
       });
-      hazardCtrlRef.current = hazardController({
+
+      hazardController({
         k,
         player: playerCtrl.player,
-        getDepth: () => playerCtrl.getState().depth,
         setSlowDebuffUntil: playerCtrl.setSlowDebuffUntil,
         setCurrentVx: playerCtrl.setCurrentVx,
         getFallSpeed: playerCtrl.getFallSpeed,
+        gameDirector: gameDirectorRef.current,
       });
 
       const hudCtrl = hudController({
@@ -77,10 +80,7 @@ const GameCanvas = () => {
       });
 
       cleanup = () => {
-        bubbleCtrlRef.current?.cleanupBubbles();
-        bounceCtrlRef.current?.cleanup();
-        maskCtrlRef.current?.cleanup();
-        hazardCtrlRef.current?.cleanup();
+        gameDirectorRef.current?.cleanup();
         playerCtrl.cleanup();
         hudCtrl.cleanup();
         gameOverCtrl.cleanup();

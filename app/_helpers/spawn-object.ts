@@ -7,11 +7,13 @@ import { objectProperties, ObjectTags } from "@/app/_helpers/object-properties";
 type Args = {
   k: KAPLAYCtx;
   tag: ObjectTags;
+  xSpawnPos?: number | null;
 };
 
 export default function spawnObject({
   k,
   tag,
+  xSpawnPos = null,
 }: Args) {
   const {
     add,
@@ -26,11 +28,10 @@ export default function spawnObject({
     height,
   } = k;
 
-  const x = Math.random() * width();
+  const x = xSpawnPos ?? Math.random() * width();
   const y = height() + 10;
 
   const props = objectProperties[tag];
-  const finalIsStatic = props?.isStatic ?? false;
 
   const components: Array<Comp | string> = [];
 
@@ -53,7 +54,7 @@ export default function spawnObject({
 
   // Collision + physics
   components.push(area());
-  components.push(body({ isStatic: finalIsStatic }));
+  components.push(body({ isStatic: props?.isStatic ?? false }));
 
   // Velocity
   if (props?.velocity) {

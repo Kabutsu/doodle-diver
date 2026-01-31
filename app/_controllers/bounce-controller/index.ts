@@ -1,12 +1,12 @@
-import { GameObj, KAPLAYCtx, PosComp, RectComp } from 'kaplay';
+import { GameObj, KAPLAYCtx, PosComp } from 'kaplay';
 import { PLAYER_TAG } from '../player-controller';
 import { HealthComp } from '@/app/_components/logic/health';
-import { getDepthBand } from '@/app/_components/logic/depth';
-import velocity, { VelocityComp } from '@/app/_components/logic/velocity';
+import { VelocityComp } from '@/app/_components/logic/velocity';
+import * as tags from '@/app/_helpers/tags';
 
-export const JELLYFISH_TAG = 'jellyfish';
-export const AIR_VENT_TAG = 'airVent';
-export const SHARP_ROCK_TAG = 'sharpRock';
+export const JELLYFISH_TAG = tags.JELLYFISH_TAG;
+export const AIR_VENT_TAG = tags.AIR_VENT_TAG;
+export const SHARP_ROCK_TAG = tags.SHARP_ROCK_TAG;
 
 const DESTROY = 'bounce_DESTROY';
 
@@ -19,18 +19,8 @@ const JELLY_HEAL = 10;
 const HIGH_SPEED_THRESHOLD = 25;
 const HIGH_SPEED_EXTRA_DAMAGE = 6;
 
-const SPAWN_INTERVAL_MS = 2500;
-const JELLYFISH_RADIUS = 18;
-const VENT_RADIUS = 22;
-const ROCK_SIZE = 24;
-
-const MIN_SPEED_Y = 8000;
-const MAX_SPEED_Y = 22500;
-
 type Args = {
   k: KAPLAYCtx;
-  player: GameObj<PosComp | RectComp>;
-  getDepth: () => number;
   setBounceVy: (v: number) => void;
   setBounceVx: (v: number) => void;
   getFallSpeed: () => number;
@@ -38,126 +28,20 @@ type Args = {
 
 export default function bounceController({
   k,
-  player,
-  getDepth,
   setBounceVy,
   getFallSpeed,
 }: Args) {
   const {
-    add,
-    circle,
-    rect,
-    pos,
-    color,
-    area,
-    body,
-    width,
-    height,
     onCollide,
     onUpdate,
     getCamPos,
+    height,
     destroyAll,
   } = k;
 
-  let lastSpawnTime = performance.now();
   let isCleanedUp = false;
 
-  function spawnOne() {
-    const band = getDepthBand(getDepth());
-    
-    const x = Math.random() * width();
-    const spawnY = player.pos.y + height();
-
-    const roll = Math.random();
-    if (band === 'early') {
-      if (roll < 0.6) {
-        add([
-          circle(JELLYFISH_RADIUS),
-          pos(x, spawnY),
-          color(255, 200, 255),
-          area(),
-          body(),
-          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
-          JELLYFISH_TAG,
-        ]);
-      } else {
-        add([
-          circle(VENT_RADIUS),
-          pos(x, spawnY),
-          color(200, 230, 255),
-          area(),
-          body(),
-          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
-          AIR_VENT_TAG,
-        ]);
-      }
-    } else if (band === 'mid') {
-      if (roll < 0.4) {
-        add([
-          circle(JELLYFISH_RADIUS),
-          pos(x, spawnY),
-          color(255, 200, 255),
-          area(),
-          body({ isStatic: true }),
-          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
-          JELLYFISH_TAG,
-        ]);
-      } else if (roll < 0.75) {
-        add([
-          circle(VENT_RADIUS),
-          pos(x, spawnY),
-          color(200, 230, 255),
-          area(),
-          body(),
-          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
-          AIR_VENT_TAG,
-        ]);
-      } else {
-        add([
-          rect(ROCK_SIZE, ROCK_SIZE),
-          pos(x, spawnY),
-          color(65, 60, 70),
-          area(),
-          body({ isStatic: true }),
-          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
-          SHARP_ROCK_TAG,
-        ]);
-      }
-    } else {
-      if (roll < 0.35) {
-        add([
-          circle(JELLYFISH_RADIUS),
-          pos(x, spawnY),
-          color(255, 200, 255),
-          area(),
-          body({ isStatic: true }),
-          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
-          JELLYFISH_TAG,
-        ]);
-      } else if (roll < 0.6) {
-        add([
-          circle(VENT_RADIUS),
-          pos(x, spawnY),
-          color(200, 230, 255),
-          area(),
-          body(),
-          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
-          AIR_VENT_TAG,
-        ]);
-      } else {
-        add([
-          rect(ROCK_SIZE, ROCK_SIZE),
-          pos(x, spawnY),
-          color(65, 60, 70),
-          area(),
-          body({ isStatic: true }),
-          velocity([MIN_SPEED_Y, MAX_SPEED_Y]),
-          SHARP_ROCK_TAG,
-        ]);
-      }
-    }
-  }
-
+  // Collision handlers
   onCollide(JELLYFISH_TAG, PLAYER_TAG, (b, p) => {
     b.destroy();
     (p as GameObj<HealthComp>).heal(JELLY_HEAL);
@@ -177,14 +61,9 @@ export default function bounceController({
     }
   });
 
+  // Update loop - move helper objects
   onUpdate(() => {
     if (isCleanedUp) return;
-
-    const now = performance.now();
-    if (now - lastSpawnTime > SPAWN_INTERVAL_MS) {
-      lastSpawnTime = now;
-      spawnOne();
-    }
 
     const dt = k.dt();
 
@@ -204,9 +83,6 @@ export default function bounceController({
 
   const cleanup = () => {
     isCleanedUp = true;
-    destroyAll(JELLYFISH_TAG);
-    destroyAll(AIR_VENT_TAG);
-    destroyAll(SHARP_ROCK_TAG);
   };
 
   return { cleanup };
