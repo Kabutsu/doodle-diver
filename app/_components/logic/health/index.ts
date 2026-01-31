@@ -6,23 +6,27 @@ export interface HealthComp extends Comp {
   hurt: (byAmount: number) => void;
 }
 
+const MAX_OXYGEN = 100;
+
 export default function health(): HealthComp {
-  let oxygen: number = 100;
+  let oxygen: number = MAX_OXYGEN;
+
+  const clamp = (v: number) => Math.max(0, Math.min(MAX_OXYGEN, v));
 
   return {
     get oxygen() {
       return oxygen;
     },
     set oxygen(value: number) {
-      oxygen = value;
+      oxygen = clamp(value);
     },
 
     heal(byAmount) {
-      oxygen += byAmount;
+      oxygen = clamp(oxygen + byAmount);
     },
 
     hurt(byAmount) {
-      oxygen -= byAmount;
+      oxygen = clamp(oxygen - byAmount);
     }
   }
 }
