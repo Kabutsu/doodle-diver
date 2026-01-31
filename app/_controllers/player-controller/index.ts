@@ -54,17 +54,24 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     height,
     destroyAll,
     dt,
+    loadSprite,
+    sprite,
+    rotate,
   } = k;
+
+  loadSprite('diver', '/diver.png');
 
   const CENTRE_X = width() / 2;
   const PLAYER_TARGET_Y = Math.round(height() * PLAYER_TARGET_POS);
 
   const player = add([
-    rect(26, 34),
+    // rect(26, 34),
     pos(CENTRE_X, height() * PLAYER_MIN_POS),
     area(),
     health(),
     body(),
+    sprite('diver', { width: 50, height: 75 }),
+    rotate(180),
     PLAYER_TAG,
   ]);
 
