@@ -5,10 +5,10 @@ import { KAPLAYCtx } from 'kaplay';
 
 export const PLAYER_TAG = 'player';
 
-const BASE_FALL_SPEED = 15;
+const BASE_FALL_SPEED = 1000;
 const HORIZ_SPEED = 220;
-const BASE_DEPLETION = 5;
-const DEPTH_PER_PIXEL = 0.05;
+const BASE_DEPLETION = 2;
+const DEPTH_PER_PIXEL = 0.01;
 
 const BOOST_UP = 280;
 const BOOST_DOWN = 450;
@@ -18,7 +18,7 @@ const BOOST_KICK_COST = 8;
 const BOOST_KICK_COOLDOWN_MS = 400;
 
 const BOUNCE_DECAY = 0.92;
-const MIN_OXYGEN_FOR_BOOST = 5;
+const MIN_OXYGEN_FOR_BOOST = 15;
 
 export type PlayerState = {
   depth: number;

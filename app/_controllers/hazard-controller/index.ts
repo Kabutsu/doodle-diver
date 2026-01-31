@@ -228,6 +228,7 @@ export default function hazardController({
         else spawnCurrent();
       }
     }
+
     if (now - lastTunnelSpawn > TUNNEL_SPAWN_INTERVAL_MS) {
       lastTunnelSpawn = now;
       spawnTunnel();

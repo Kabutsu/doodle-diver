@@ -23,6 +23,8 @@ const JELLYFISH_RADIUS = 18;
 const VENT_RADIUS = 22;
 const ROCK_SIZE = 24;
 
+const SPEED_Y = 8000;
+
 type Args = {
   k: KAPLAYCtx;
   player: GameObj<PosComp | RectComp>;
@@ -60,9 +62,9 @@ export default function bounceController({
 
   function spawnOne() {
     const band = getDepthBand(getDepth());
-    const camPos = getCamPos();
-    const spawnY = camPos.y + height() / 2 + 80 + Math.random() * 120;
-    const x = 40 + Math.random() * (width() - 80);
+    
+    const x = Math.random() * width();
+    const spawnY = player.pos.y + height();
 
     const roll = Math.random();
     if (band === 'early') {
@@ -166,11 +168,17 @@ export default function bounceController({
       spawnOne();
     }
 
+    const dt = k.dt();
+
     const camTop = getCamPos().y - height() / 2 - 50;
     [JELLYFISH_TAG, AIR_VENT_TAG, SHARP_ROCK_TAG].forEach((tag) => {
       k.get(tag).forEach((obj) => {
         const o = obj as GameObj<PosComp>;
-        if (o.pos.y < camTop) o.tag(DESTROY);
+        if (o.pos.y < camTop) {
+          o.tag(DESTROY);
+          return;
+        }
+        o.move(0, -SPEED_Y * dt);
       });
     });
     destroyAll(DESTROY);

@@ -11,7 +11,6 @@ const MIN_TIMEOUT = 1500;
 const MAX_TIMEOUT = 5000;
 
 const SPEED_Y = 9000;
-const SPEED_X = 10000;
 
 type Args = {
   k: KAPLAYCtx;
