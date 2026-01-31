@@ -5,10 +5,15 @@ import { KAPLAYCtx } from 'kaplay';
 
 export const PLAYER_TAG = 'player';
 
-const BASE_FALL_SPEED = 1000;
+const BASE_FALL_SPEED = 1500;
+const VERTI_SPEED = 5000;
 const HORIZ_SPEED = 220;
 const BASE_DEPLETION = 2;
 const DEPTH_PER_PIXEL = 0.01;
+
+const PLAYER_TARGET_POS = 0.25;
+const PLAYER_MIN_POS = 0.1;
+const PLAYER_MAX_POS = 0.4;
 
 const BOOST_UP = 280;
 const BOOST_DOWN = 450;
@@ -44,19 +49,26 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     onUpdate,
     width,
     height,
-    setCamPos,
     destroyAll,
     isKeyDown,
     dt,
+    getCamPos,
   } = k;
+
+  const CENTRE_X = width() / 2;
+  const CENTRE_Y = height() / 2;
+  const PLAYER_TARGET_Y = Math.round(height() * PLAYER_TARGET_POS);
 
   const player = add([
     rect(26, 34),
-    pos(width() / 2, 34),
+    pos(CENTRE_X, height() * PLAYER_MIN_POS),
     area(),
     health(),
     PLAYER_TAG,
   ]);
+
+  const MIN_X = -(3 * player.width / 4);
+  const MAX_X = width() - (player.width / 4);
 
   let depth = 0;
   let currentDepth = 0;
@@ -70,8 +82,9 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
   let slowDebuffUntil = 0;
   let boostKickCooldownUntil = 0;
 
-  let cameraY = player.pos.y + Math.floor(height() / 4);
-  const TRIGGER_OFFSET = height() / 4;
+  const TRIGGER_OFFSET = CENTRE_Y / 2;
+  const cameraY = player.pos.y + Math.floor(TRIGGER_OFFSET);
+  console.log('cameraY;getCamPos().y:=', cameraY, getCamPos().y);
 
   const setBounceVy = (v: number) => {
     bounceVy = v;
@@ -119,17 +132,17 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     }
   });
 
-  onKeyDown('up', () => {
-    if (isGameOver) return;
-    bounceVy = KICK_UP;
-    applyBoostOrKick(BOOST_KICK_COST);
-  });
-  onKeyDown('down', () => {
-    if (isGameOver) return;
-    const d = dt();
-    player.move(0, KICK_DOWN * d);
-    applyBoostOrKick(BOOST_KICK_COST);
-  });
+  // onKeyDown('up', () => {
+  //   if (isGameOver) return;
+  //   bounceVy = KICK_UP;
+  //   applyBoostOrKick(BOOST_KICK_COST);
+  // });
+  // onKeyDown('down', () => {
+  //   if (isGameOver) return;
+  //   const d = dt();
+  //   player.move(0, KICK_DOWN * d);
+  //   applyBoostOrKick(BOOST_KICK_COST);
+  // });
 
   let lastFallSpeed = BASE_FALL_SPEED;
 
@@ -151,8 +164,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     const pauseDrain = maskDef?.pauseOxygenDrain ?? false;
     const bounceDecay = maskDef?.bounceDecayMult ?? 1;
 
-    player.move(bounceVx * d, -bounceVy * d);
-    player.move(0, fallSpeed * d);
+    player.move(bounceVx * d, 0);
     player.move(currentVx * d, 0);
 
     bounceVy *= BOUNCE_DECAY * bounceDecay;
@@ -166,13 +178,15 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
       player.hurt(BASE_DEPLETION * drainMult * d);
     }
 
-    if (player.pos.x < -20) player.pos.x = width() + 20;
-    if (player.pos.x > width() + 20) player.pos.x = -20;
+    if (player.pos.x < MIN_X) player.pos.x = MAX_X;
+    if (player.pos.x > MAX_X) player.pos.x = MIN_X;
 
-    if (player.pos.y > cameraY - height() / 2 + TRIGGER_OFFSET) {
-      cameraY = player.pos.y - TRIGGER_OFFSET + height() / 2;
+    if (player.pos.y > PLAYER_TARGET_Y + 5) {
+      player.move(0, VERTI_SPEED * d * -1);
     }
-    setCamPos(width() / 2, cameraY);
+    else if (player.pos.y < PLAYER_TARGET_Y - 5) {
+      player.move(0, VERTI_SPEED * d);
+    }
 
     if (player.oxygen <= 0) {
       player.oxygen = 0;
