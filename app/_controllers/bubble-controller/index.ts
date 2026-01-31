@@ -1,6 +1,9 @@
 import { CircleComp, GameObj, KAPLAYCtx, PosComp, RectComp } from "kaplay";
+import { PLAYER_TAG } from "../player-controller";
+import { HealthComp } from "@/app/_components/logic/health";
 
-const BUBBLE = 'bubble';
+export const BUBBLE_TAG = 'bubble';
+
 const DESTROY = 'bubble_DESTROY';
 const COLOR = '#a6dbff';
 
@@ -41,7 +44,7 @@ export default function bubblesController({ k, player }: Args) {
       pos(x, y),
       color(COLOR),
       area({ collisionIgnore: undefined }),
-      BUBBLE,
+      BUBBLE_TAG,
     ]);
     
     timeout = setTimeout(
@@ -59,12 +62,13 @@ export default function bubblesController({ k, player }: Args) {
 
   const cleanupBubbles = () => {
     bubblesCleared = true;
-    destroyAll(BUBBLE);
+    destroyAll(BUBBLE_TAG);
     clearTimeout(timeout);
   };
 
-  onCollide(BUBBLE, 'player', (b, p) => {
+  onCollide(BUBBLE_TAG, PLAYER_TAG, (b, p) => {
     b.destroy();
+    (p as GameObj<HealthComp>).heal(15);
   })
 
   onUpdate(() => {
@@ -75,7 +79,7 @@ export default function bubblesController({ k, player }: Args) {
     const dt = k.dt();
     const camTop = getCamPos().y - (height() / 2);
 
-    k.get(BUBBLE).forEach(
+    k.get(BUBBLE_TAG).forEach(
       (bubble) => {
         const b = bubble as GameObj<PosComp | CircleComp>;
         if (b.pos.y < camTop) {

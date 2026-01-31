@@ -1,4 +1,7 @@
-import { GameObj, KAPLAYCtx, PosComp, RectComp } from 'kaplay';
+import health from '@/app/_components/logic/health';
+import { KAPLAYCtx } from 'kaplay';
+
+export const PLAYER_TAG = 'player';
 
 const FALL_SPEED = 15;
 const HORIZ_SPEED = 220;
@@ -16,17 +19,29 @@ type Args = {
 };
 
 function playerController({ k, onOxygenDepleted }: Args) {
-  const { add, rect, pos, area, onKeyDown, onUpdate, width, height, setCamPos, destroyAll } = k;
+  const {
+    add,
+    rect,
+    pos,
+    area,
+    onKeyDown,
+    onCollide,
+    onUpdate,
+    width,
+    height,
+    setCamPos,
+    destroyAll,
+  } = k;
 
   const player = add([
     rect(26, 34),
     pos(width() / 2, 34),
     area(),
+    health(),
     'player',
-  ]) as GameObj<PosComp | RectComp>;
+  ]);
 
   let depth = 0;
-  let oxygen = 100;
   const startTime = performance.now();
   let isGameOver = false;
   let oxygenDepletedCalled = false;
@@ -44,16 +59,16 @@ function playerController({ k, onOxygenDepleted }: Args) {
     const dt = k.dt();
 
     player.move(0, FALL_SPEED * dt);
+    player.hurt(DEPLETION_SPEED * dt);
     depth += FALL_SPEED * dt;
-    oxygen -= DEPLETION_SPEED * dt;
 
     if (player.pos.x < -20) player.pos.x = width() + 20;
     if (player.pos.x > width() + 20) player.pos.x = -20;
 
     setCamPos(width() / 2, player.pos.y + Math.floor(height() / 4));
 
-    if (oxygen <= 0) {
-      oxygen = 0;
+    if (player.oxygen <= 0) {
+      player.oxygen = 0;
       isGameOver = true;
       if (!oxygenDepletedCalled) {
         oxygenDepletedCalled = true;
@@ -62,7 +77,11 @@ function playerController({ k, onOxygenDepleted }: Args) {
     }
   });
 
-  const getState = (): PlayerState => ({ depth, oxygen, startTime });
+  const getState = (): PlayerState => ({
+    depth,
+    oxygen: player.oxygen,
+    startTime,
+  });
 
   const cleanup = () => {
     destroyAll('player');
