@@ -19,8 +19,9 @@ const BOOST_UP = 280;
 const BOOST_DOWN = 450;
 const KICK_UP = 180;
 const KICK_DOWN = 200;
-const BOOST_KICK_COST = 8;
-const BOOST_KICK_COOLDOWN_MS = 400;
+const BOOST_KICK_COST = 0;
+const BOOST_KICK_COOLDOWN_MS = 3500;
+const BOOST_KICK_DURATION_MS = 1000;
 
 const BOUNCE_DECAY = 0.92;
 const MIN_OXYGEN_FOR_BOOST = 15;
@@ -46,13 +47,14 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     pos,
     area,
     onKeyDown,
+    onKeyPress,
+    onKeyRelease,
     onUpdate,
     width,
     height,
     destroyAll,
     isKeyDown,
     dt,
-    getCamPos,
   } = k;
 
   const CENTRE_X = width() / 2;
@@ -81,10 +83,8 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
   let currentVx = 0;
   let slowDebuffUntil = 0;
   let boostKickCooldownUntil = 0;
-
-  const TRIGGER_OFFSET = CENTRE_Y / 2;
-  const cameraY = player.pos.y + Math.floor(TRIGGER_OFFSET);
-  console.log('cameraY;getCamPos().y:=', cameraY, getCamPos().y);
+  let boostKickDurationUntil = 0;
+  let isBoosting = false;
 
   const setBounceVy = (v: number) => {
     bounceVy = v;
@@ -101,48 +101,48 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
 
   const applyBoostOrKick = (cost: number) => {
     if (player.oxygen < MIN_OXYGEN_FOR_BOOST) return;
+
     const now = performance.now();
     if (now < boostKickCooldownUntil) return;
+  
     boostKickCooldownUntil = now + BOOST_KICK_COOLDOWN_MS;
+    boostKickDurationUntil = now + BOOST_KICK_DURATION_MS;
     player.hurt(cost);
+    isBoosting = true;
+  };
+
+  const getSpeedMultiplier = () => {
+    switch (true) {
+      case performance.now() < slowDebuffUntil:
+        return 0.5;
+      case isBoosting && performance.now() < boostKickDurationUntil:
+        return 2.5;
+      default:
+        return 1
+    }
   };
 
   onKeyDown('left', () => {
     if (!isGameOver) {
-      const mult = performance.now() < slowDebuffUntil ? 0.5 : 1;
+      const mult = getSpeedMultiplier();
       player.move(-HORIZ_SPEED * mult, 0);
     }
   });
   onKeyDown('right', () => {
     if (!isGameOver) {
-      const mult = performance.now() < slowDebuffUntil ? 0.5 : 1;
+      const mult = getSpeedMultiplier();
       player.move(HORIZ_SPEED * mult, 0);
     }
   });
 
-  onKeyDown('space', () => {
+  onKeyPress('space', () => {
     if (isGameOver) return;
-    if (isKeyDown('up')) {
-      bounceVy = BOOST_UP;
-      applyBoostOrKick(BOOST_KICK_COST);
-    } else {
-      const d = dt();
-      player.move(0, BOOST_DOWN * d);
-      applyBoostOrKick(BOOST_KICK_COST);
-    }
+    applyBoostOrKick(BOOST_KICK_COST);
   });
 
-  // onKeyDown('up', () => {
-  //   if (isGameOver) return;
-  //   bounceVy = KICK_UP;
-  //   applyBoostOrKick(BOOST_KICK_COST);
-  // });
-  // onKeyDown('down', () => {
-  //   if (isGameOver) return;
-  //   const d = dt();
-  //   player.move(0, KICK_DOWN * d);
-  //   applyBoostOrKick(BOOST_KICK_COST);
-  // });
+  onKeyRelease(['left', 'right'], () => {
+    isBoosting = false;
+  });
 
   let lastFallSpeed = BASE_FALL_SPEED;
 
