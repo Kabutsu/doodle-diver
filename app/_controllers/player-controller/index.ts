@@ -2,8 +2,12 @@ import health from '@/app/_components/logic/health';
 import { getFallSpeedMultiplier, getOxygenDrainMultiplier } from '@/app/_components/logic/depth';
 import { MASK_DEFS, type MaskType } from '@/app/_components/logic/mask/types';
 import { KAPLAYCtx, Key } from 'kaplay';
+import { sprites } from '@/app/_helpers/sprites';
 
 export const PLAYER_TAG = 'player';
+
+const PLAYER_WIDTH = 75;
+const PLAYER_HEIGHT = 57;
 
 const BASE_FALL_SPEED = 1500;
 const VERTI_SPEED = 7500;
@@ -42,13 +46,13 @@ type Args = {
 function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
   const {
     add,
-    rect,
     pos,
     area,
     body,
     onKeyDown,
     onKeyPress,
     onKeyRelease,
+    isKeyDown,
     onUpdate,
     width,
     height,
@@ -56,10 +60,9 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     dt,
     loadSprite,
     sprite,
-    rotate,
   } = k;
 
-  loadSprite('diver', '/diver.png');
+  loadSprite(sprites.diver.name, `/${sprites.diver.name}.png`);
 
   const CENTRE_X = width() / 2;
   const PLAYER_TARGET_Y = Math.round(height() * PLAYER_TARGET_POS);
@@ -70,8 +73,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     area(),
     health(),
     body(),
-    sprite('diver', { width: 50, height: 75 }),
-    rotate(180),
+    sprite(sprites.diver.name, { width: sprites.diver.width, height: sprites.diver.height }),
     PLAYER_TAG,
   ]);
 
@@ -134,12 +136,14 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     if (!isGameOver) {
       const mult = getSpeedMultiplier();
       player.move(-HORIZ_SPEED * mult, 0);
+      if (!isKeyDown('right')) player.flipX = true;
     }
   });
   onKeyDown('right', () => {
     if (!isGameOver) {
       const mult = getSpeedMultiplier();
       player.move(HORIZ_SPEED * mult, 0);
+      if (!isKeyDown('left')) player.flipX = false;
     }
   });
   onKeyDown('up', () => {

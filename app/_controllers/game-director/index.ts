@@ -10,6 +10,7 @@ import {
   type ObjectCategory,
 } from "@/app/_helpers/spawn-manager";
 import * as tags from "@/app/_helpers/tags";
+import { sprites } from "@/app/_helpers/sprites";
 import { type MaskType } from "@/app/_components/logic/mask/types";
 
 const SPAWN_LOOP_INTERVAL_MS = 1500; // Unified spawn check every 1.5 seconds
@@ -36,7 +37,11 @@ type Args = {
 };
 
 export default function gameDirector({ k, getDepth }: Args) {
-  const { width, height, onUpdate, destroyAll, getCamPos } = k;
+  const { width, height, onUpdate, destroyAll, getCamPos, loadSprite } = k;
+
+  Object.values(sprites).forEach((sprite) => {
+    loadSprite(sprite.name, `/${sprite.name}.png`, sprite.animation ?? {});
+  });
 
   // Track last spawn times per category
   const lastSpawnTimes: Record<ObjectCategory, number> = {
@@ -234,15 +239,21 @@ export default function gameDirector({ k, getDepth }: Args) {
       blind: [200, 200, 255],
     };
 
-    const obj = k.add([
-      k.rect(20, 20),
-      k.pos(x, spawnY),
-      k.color(...MASK_COLORS[type]),
-      k.area(),
-      velocity([15000, 25000]),
-      k.body(),
-      tags.MASK_PICKUP_TAG,
-    ]) as GameObj;
+    const obj = spawnObject({
+      k,
+      tag: tags.MASK_PICKUP_TAG,
+      xSpawnPos: x,
+    });
+
+    // const obj = k.add([
+    //   k.rect(20, 20),
+    //   k.pos(x, spawnY),
+    //   k.color(...MASK_COLORS[type]),
+    //   k.area(),
+    //   velocity([15000, 25000]),
+    //   k.body(),
+    //   tags.MASK_PICKUP_TAG,
+    // ]) as GameObj;
 
     maskTypeMap.set(obj, type);
   }

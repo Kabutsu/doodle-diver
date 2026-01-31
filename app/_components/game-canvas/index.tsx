@@ -23,6 +23,30 @@ const GameCanvas = () => {
         height: window.innerHeight,
       });
 
+      // Load and set background image
+      k.loadSprite('background', '/background.png');
+      
+      const bgObj = k.add([
+        k.sprite('background'),
+        k.pos(0, 0),
+        k.anchor('topleft'),
+        k.fixed(),
+        k.layer('bg'),
+        k.scale(1),
+      ]);
+
+      // Scale to fit vertically and center horizontally
+      k.onLoad(() => {
+        const bgHeight = bgObj.height;
+        const bgWidth = bgObj.width;
+        if (bgHeight > 0) {
+          const scale = window.innerHeight / bgHeight;
+          bgObj.scale = k.vec2(scale);
+          // Center horizontally in the 480px width
+          bgObj.pos.x = (480 - bgWidth * scale) / 2;
+        }
+      });
+
       const gameOverCtrl = gameOverController({ k });
 
       const gameDirectorRef: { current: GameDirectorReturn | null } = { current: null };

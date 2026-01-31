@@ -43,6 +43,8 @@ export default function spawnObject({
     components.push(sprite(props.sprite.name, {
       width: props.sprite.width,
       height: props.sprite.height,
+      frame: props.sprite.anim ? 1 : undefined,
+      anim: props.sprite.anim ?? undefined,
     }));
   } else if (props?.shape === 'circle') {
     components.push(circle(props.radius ?? 16));
@@ -64,5 +66,5 @@ export default function spawnObject({
   // Tag
   components.push(tag);
 
-  add(components);
+  return add(components);
 }
