@@ -10,10 +10,10 @@ export const SHARP_ROCK_TAG = tags.SHARP_ROCK_TAG;
 
 const DESTROY = 'bounce_DESTROY';
 
-const JELLY_VY = 220;
-const VENT_VY = 420;
+const JELLY_VY = 2200;
+const VENT_VY = 4200;
 const SHARP_ROCK_DAMAGE = 12;
-const SHARP_ROCK_SPIKE = -180;
+const SHARP_ROCK_SPIKE = -1800;
 const JELLY_HURT = 5;
 
 const HIGH_SPEED_THRESHOLD = 25;
@@ -22,7 +22,7 @@ const BASE_FALL_SPEED = 1500;
 
 type Args = {
   k: KAPLAYCtx;
-  setBounceVy: (v: number) => void;
+  setBounceVy: (v: number, duration?: number, type?: 'upward' | 'downward' | null) => void;
   setBounceVx: (v: number) => void;
   getFallSpeed: () => number;
 };
@@ -46,17 +46,20 @@ export default function bounceController({
   onCollide(JELLYFISH_TAG, PLAYER_TAG, (b, p) => {
     b.destroy();
     (p as GameObj<HealthComp>).hurt(JELLY_HURT);
-    setBounceVy(JELLY_VY);
+    setBounceVy(JELLY_VY, 600, 'upward');
+    k.shake(4);
   });
 
-  onCollide(AIR_VENT_TAG, PLAYER_TAG, (b, p) => {
-    setBounceVy(VENT_VY);
+  onCollide(AIR_VENT_TAG, PLAYER_TAG, () => {
+    setBounceVy(VENT_VY, 600, 'upward');
+    k.shake(6);
   });
 
   onCollide(SHARP_ROCK_TAG, PLAYER_TAG, (b, p) => {
     const healthObj = p as GameObj<HealthComp>;
     healthObj.hurt(SHARP_ROCK_DAMAGE);
-    setBounceVy(SHARP_ROCK_SPIKE);
+    setBounceVy(SHARP_ROCK_SPIKE, 600, 'downward');
+    k.shake(8);
     if (getFallSpeed() > HIGH_SPEED_THRESHOLD) {
       healthObj.hurt(HIGH_SPEED_EXTRA_DAMAGE);
     }

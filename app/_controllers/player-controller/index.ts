@@ -25,6 +25,9 @@ const KICK_MODIFIER = 25;
 
 const BOUNCE_DECAY = 0.92;
 const MIN_OXYGEN_FOR_BOOST = 15;
+const BOUNCE_DURATION_MS = 600;
+const BOUNCE_ROTATION_ANGLE = 25;
+const FLASH_DURATION_MS = 150;
 
 export type PlayerState = {
   depth: number;
@@ -70,6 +73,8 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     health(),
     body(),
     sprite(sprites.diver.name, { width: sprites.diver.width, height: sprites.diver.height }),
+    k.rotate(0),
+    k.opacity(1),
     PLAYER_TAG,
   ]);
 
@@ -86,13 +91,19 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
   let bounceVx = 0;
   let currentVx = 0;
   let slowDebuffUntil = 0;
+  let activeBounceUntil = 0;
+  let bounceType: 'upward' | 'downward' | null = null;
+  let flashUntil = 0;
   let boostKickCooldownUntil = 0;
   let boostKickDurationUntil = 0;
   let isBoosting = false;
   let isKicking = false;
 
-  const setBounceVy = (v: number) => {
+  const setBounceVy = (v: number, duration = BOUNCE_DURATION_MS, type: 'upward' | 'downward' | null = null) => {
     bounceVy = v;
+    activeBounceUntil = performance.now() + duration;
+    bounceType = type;
+    flashUntil = performance.now() + FLASH_DURATION_MS;
   };
   const setBounceVx = (v: number) => {
     bounceVx = v;
@@ -187,6 +198,14 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     const maskActive = mask && mask.expiresAt > now;
     const maskDef = maskActive ? MASK_DEFS[mask.type] : null;
 
+    // Flash effect
+    if (now < flashUntil) {
+      const flashProgress = (flashUntil - now) / FLASH_DURATION_MS;
+      player.opacity = 0.3 + (flashProgress * 0.7);
+    } else {
+      player.opacity = 1;
+    }
+
     const fallMult = getFallSpeedMultiplier(depth) * (maskDef?.fallSpeedMult ?? 1);
     const slowMult = performance.now() < slowDebuffUntil ? 0.5 : 1;
     const fallSpeed = BASE_FALL_SPEED * fallMult * slowMult;
@@ -200,8 +219,24 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     player.move(currentVx * d, 0);
     player.move(0, bounceVy * d);
 
-    bounceVy *= BOUNCE_DECAY * bounceDecay;
-    bounceVx *= BOUNCE_DECAY;
+    // Apply rotation based on bounce velocity
+    const isBouncing = now < activeBounceUntil;
+    if (isBouncing && bounceType) {
+      const rotationDir = bounceType === 'upward' ? -1 : 1;
+      const bounceStrength = Math.abs(bounceVy) / 2000; // normalize
+      player.angle = rotationDir * BOUNCE_ROTATION_ANGLE * Math.min(bounceStrength, 1);
+    } else {
+      // Smoothly return to neutral position
+      player.angle *= 0.85;
+      if (Math.abs(player.angle) < 0.5) player.angle = 0;
+    }
+
+    // Apply bounce decay (skip decay for jellyfish bounces during active bounce period)
+    const isJellyfishBounce = bounceType === 'upward' && bounceVy > 0;
+    if (!(isJellyfishBounce && isBouncing)) {
+      bounceVy *= BOUNCE_DECAY * bounceDecay;
+      bounceVx *= BOUNCE_DECAY;
+    }
 
     // Only increase depth when player is below target position
     if (player.pos.y >= PLAYER_TARGET_Y - player.height) {
@@ -216,7 +251,8 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     if (player.pos.x < MIN_X) player.pos.x = MAX_X;
     if (player.pos.x > MAX_X) player.pos.x = MIN_X;
 
-    if (!isKicking) {
+    // Auto-center player vertically (disabled during active bounce)
+    if (!isKicking && now >= activeBounceUntil) {
       if (player.pos.y > PLAYER_TARGET_Y + 5) {
         player.move(0, VERTI_SPEED * d * -1);
       }

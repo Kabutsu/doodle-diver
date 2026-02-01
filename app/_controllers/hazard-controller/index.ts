@@ -54,6 +54,7 @@ export default function hazardController({
   onCollide(ROCK_TAG, PLAYER_TAG, (b, p) => {
     const h = p as GameObj<HealthComp>;
     h.hurt(ROCK_DAMAGE);
+    k.shake(5);
     b.destroy();
   });
 
@@ -61,6 +62,7 @@ export default function hazardController({
     const h = p as GameObj<HealthComp>;
     setSlowDebuffUntil(performance.now() + MINE_DEBUFF_MS);
     h.hurt(MINE_DAMAGE);
+    k.shake(10);
     b.destroy();
   });
 
@@ -68,6 +70,7 @@ export default function hazardController({
     const h = p as GameObj<HealthComp>;
     const fallSpeed = getFallSpeed();
     h.hurt(FISH_DAMAGE);
+    k.shake(4);
     if (fallSpeed > HIGH_SPEED_THRESHOLD) {
       h.hurt(HIGH_SPEED_EXTRA);
     }
