@@ -12,10 +12,11 @@ type Args = {
     hasMinOxygen: boolean;
     isSlowed: boolean;
   };
+  getPlayerPos?: () => { x: number; y: number };
 };
 
-function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickState }: Args) {
-  const { add, text, pos, rect, color, opacity, z, fixed, onUpdate, destroy, width, height, anchor } = k;
+function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickState, getPlayerPos }: Args) {
+  const { add, text, pos, rect, color, opacity, z, fixed, onUpdate, destroy, width, height, anchor, circle } = k;
 
   const depthLabel = add([
     text('Depth: 0m'),
@@ -46,14 +47,34 @@ function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickStat
     fixed(),
   ]) as GameObj;
 
-  const blindOverlay = add([
+  // Progressive darkness overlay (increases with depth)
+  const depthDarknessOverlay = add([
     rect(width(), height()),
     pos(0, 0),
     color(0, 0, 0),
     opacity(0),
-    z(9),
+    z(8),
     fixed(),
   ]) as GameObj;
+
+  // Vignette effect for blind mask (concentric circles)
+  const maxDimension = Math.max(width(), height());
+  const vignetteCircles: GameObj[] = [];
+  
+  // Create 5 concentric circles with increasing radius and opacity
+  for (let i = 0; i < 5; i++) {
+    const radius = maxDimension * (0.15 + i * 0.25);
+    const vignetteCircle = add([
+      circle(radius),
+      pos(width() / 2, height() / 2),
+      color(0, 0, 0),
+      opacity(0),
+      z(9),
+      fixed(),
+      anchor('center'),
+    ]) as GameObj;
+    vignetteCircles.push(vignetteCircle);
+  }
 
   let isCleanedUp = false;
 
@@ -61,6 +82,13 @@ function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickStat
     if (isCleanedUp) return;
     depthLabel.text = `Depth: ${Math.floor(getDepth())}m`;
     oxygenLabel.text = `O2: ${Math.floor(getOxygen())}%`;
+
+    // Update progressive darkness based on depth (exponential, max 90% at 3000m)
+    const depth = getDepth();
+    const maxDepth = 3000;
+    const depthProgress = Math.min(depth / maxDepth, 1);
+    const darknessOpacity = depthProgress * depthProgress * 0.9; // Exponential curve
+    depthDarknessOverlay.opacity = darknessOpacity;
 
     const mask = getActiveMask?.() ?? null;
     const now = performance.now();
@@ -70,14 +98,27 @@ function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickStat
       maskLabel.text = `${name} ${secs}s`;
       maskLabel.hidden = false;
       if (mask.type === 'blind') {
-        blindOverlay.opacity = 0.6;
+        // Update vignette position to follow player
+        const playerPos = getPlayerPos?.() ?? { x: width() / 2, y: height() / 2 };
+        vignetteCircles.forEach((circle, i) => {
+          circle.pos.x = playerPos.x;
+          circle.pos.y = playerPos.y;
+          const circleOpacity = (i + 1) * 0.18;
+          circle.opacity = circleOpacity;
+        });
       } else {
-        blindOverlay.opacity = 0;
+        // Hide vignette circles when not blind
+        vignetteCircles.forEach(circle => {
+          circle.opacity = 0;
+        });
       }
     } else {
       maskLabel.text = '';
       maskLabel.hidden = true;
-      blindOverlay.opacity = 0;
+      // Hide vignette circles when no mask active
+      vignetteCircles.forEach(circle => {
+        circle.opacity = 0;
+      });
     }
 
     // Boost indicator
@@ -108,7 +149,8 @@ function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickStat
     destroy(oxygenLabel);
     destroy(maskLabel);
     destroy(boostKickLabel);
-    destroy(blindOverlay);
+    destroy(depthDarknessOverlay);
+    vignetteCircles.forEach(circle => destroy(circle));
   };
 
   return { cleanup };

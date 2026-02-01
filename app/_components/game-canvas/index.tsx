@@ -14,7 +14,7 @@ import type { KAPLAYCtx } from 'kaplay';
 const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cleanupRef = useRef<(() => void) | undefined>(undefined);
-  const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu');
+  const [, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu');
   const kRef = useRef<KAPLAYCtx | null>(null);
 
   useEffect(() => {
@@ -142,6 +142,7 @@ const GameCanvas = () => {
           getOxygen: () => playerCtrl.getState().oxygen,
           getActiveMask: () => maskCtrlRef.current?.getActiveMask() ?? null,
           getBoostKickState: () => playerCtrl.getBoostKickState(),
+          getPlayerPos: () => playerCtrl.getPlayerPos(),
         });
 
         gameCleanup = () => {

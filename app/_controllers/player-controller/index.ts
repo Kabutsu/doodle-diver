@@ -291,6 +291,8 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
 
   const getFallSpeed = () => lastFallSpeed;
 
+  const getPlayerPos = () => ({ x: player.pos.x, y: player.pos.y });
+
   const cleanup = () => {
     destroyAll(PLAYER_TAG);
   };
@@ -299,6 +301,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     player,
     getState,
     getFallSpeed,
+    getPlayerPos,
     setBounceVy,
     setBounceVx,
     setSlowDebuffUntil,
