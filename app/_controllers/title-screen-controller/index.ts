@@ -19,7 +19,7 @@ function titleScreenController({ k, isMobile = false, onStart }: Args) {
   loadSprite(sprites.diver.name, `/${sprites.diver.name}.png`);
 
   const CENTRE_X = width() / 2;
-  const PLAYER_MIN_POS = 0.1;
+  const PLAYER_MIN_POS = isMobile ? 0.15 : 0.1;
   const PLAYER_START_Y = height() * PLAYER_MIN_POS;
 
   // Semi-transparent overlay for better text readability
@@ -85,34 +85,39 @@ function titleScreenController({ k, isMobile = false, onStart }: Args) {
     ]) as GameObj;
   });
 
-  // Game tips section
-  const tipsTitle = add([
-    text('SURVIVE THE DEPTHS!', { size: 24 }),
-    pos(CENTRE_X, 360),
-    anchor('center'),
-    z(11),
-    fixed(),
-    color(100, 255, 100),
-  ]) as GameObj;
-
-  const tips = [
-    'Collect oxygen tanks to stay alive',
-    'Pick up masks for special effects',
-    'Avoid rocks, mines, and jellyfish',
-    'Bounce off swirling vortexes',
-    'Watch your oxygen level!',
-  ];
-
-  const tipTexts = tips.map((tip, i) => {
-    return add([
-      text(tip, { size: 14 }),
-      pos(CENTRE_X, 400 + i * 25),
+  // Game tips section (desktop only)
+  let tipsTitle: GameObj | null = null;
+  let tipTexts: GameObj[] = [];
+  
+  if (!isMobile) {
+    tipsTitle = add([
+      text('SURVIVE THE DEPTHS!', { size: 24 }),
+      pos(CENTRE_X, 360),
       anchor('center'),
       z(11),
       fixed(),
-      color(180, 180, 180),
+      color(100, 255, 100),
     ]) as GameObj;
-  });
+
+    const tips = [
+      'Collect oxygen tanks to stay alive',
+      'Pick up masks for special effects',
+      'Avoid rocks, mines, and jellyfish',
+      'Bounce off swirling vortexes',
+      'Watch your oxygen level!',
+    ];
+
+    tipTexts = tips.map((tip, i) => {
+      return add([
+        text(tip, { size: 14 }),
+        pos(CENTRE_X, 400 + i * 25),
+        anchor('center'),
+        z(11),
+        fixed(),
+        color(180, 180, 180),
+      ]) as GameObj;
+    });
+  }
 
   // High scores section
   const scoresTitle = add([
@@ -291,7 +296,7 @@ function titleScreenController({ k, isMobile = false, onStart }: Args) {
     destroy(playerSprite);
     destroy(controlsTitle);
     controlTexts.forEach(ct => destroy(ct));
-    destroy(tipsTitle);
+    if (tipsTitle) destroy(tipsTitle);
     tipTexts.forEach(tt => destroy(tt));
     destroy(scoresTitle);
     scoreTexts.forEach(st => destroy(st));

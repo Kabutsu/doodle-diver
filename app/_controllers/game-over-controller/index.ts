@@ -164,10 +164,19 @@ function gameOverController({ k, isMobile = false, onRequestMobileInput, onResta
       ]) as GameObj;
       uiElements.push(submitButtonText);
 
+      let isButtonDisabled = false;
+
       submitButton.onClick(() => {
-        if (onRequestMobileInput) {
+        if (onRequestMobileInput && !isButtonDisabled) {
+          isButtonDisabled = true;
+          submitButton.color = k.rgb(80, 80, 80); // Gray out button
+          submitButtonText.color = k.rgb(150, 150, 150);
+          
           onRequestMobileInput((name: string) => {
             playerName = name;
+            // Destroy submit button and text before submitting
+            destroy(submitButton);
+            destroy(submitButtonText);
             submitPlayerScore(finalDepth, score, runTimeMs);
           });
         }

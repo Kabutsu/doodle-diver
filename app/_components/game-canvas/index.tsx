@@ -210,32 +210,94 @@ const GameCanvas = () => {
         className="block my-0 mx-auto touch-none"
       />
       {mobileInputVisible && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-70">
-          <div className="bg-linear-to-b from-blue-900 to-blue-950 border-4 border-yellow-400 rounded-lg p-6 max-w-sm mx-4 shadow-2xl">
-            <h2 className="text-yellow-300 text-2xl font-bold text-center mb-4">Enter Your Name</h2>
-            <input
-              type="text"
-              maxLength={12}
-              value={mobileInputValue}
-              onChange={(e) => setMobileInputValue(e.target.value)}
-              className="w-full px-4 py-3 text-xl text-white bg-blue-950 border-2 border-cyan-400 rounded-lg focus:outline-none focus:border-yellow-400 mb-2"
-              placeholder="Your name..."
-              autoFocus
-            />
-            <div className="text-gray-400 text-sm text-right mb-4">{mobileInputValue.length}/12</div>
-            <button
-              onClick={() => {
-                const name = mobileInputValue.trim() || 'Anonymous';
-                if (mobileInputCallback) {
-                  mobileInputCallback(name);
-                }
-                setMobileInputVisible(false);
-                setMobileInputCallback(null);
-              }}
-              className="w-full bg-linear-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-lg active:scale-95 transition-transform"
-            >
-              Submit Score
-            </button>
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div className="relative mx-4 max-w-sm" style={{
+            backgroundColor: '#1a1a2e',
+            border: '4px solid #ffd700',
+            borderRadius: '0',
+            boxShadow: '0 0 0 2px #000, 0 0 20px rgba(255, 215, 0, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.1)'
+          }}>
+            {/* Decorative corners */}
+            <div className="absolute top-0 left-0 w-3 h-3 bg-yellow-400" style={{ transform: 'translate(-50%, -50%)' }} />
+            <div className="absolute top-0 right-0 w-3 h-3 bg-yellow-400" style={{ transform: 'translate(50%, -50%)' }} />
+            <div className="absolute bottom-0 left-0 w-3 h-3 bg-yellow-400" style={{ transform: 'translate(-50%, 50%)' }} />
+            <div className="absolute bottom-0 right-0 w-3 h-3 bg-yellow-400" style={{ transform: 'translate(50%, 50%)' }} />
+            
+            <div className="p-6">
+              <div className="text-center mb-6" style={{
+                backgroundColor: '#ffd700',
+                color: '#1a1a2e',
+                padding: '8px',
+                fontWeight: 'bold',
+                fontSize: '20px',
+                letterSpacing: '2px',
+                textShadow: '1px 1px 0 rgba(0,0,0,0.3)',
+                marginLeft: '-24px',
+                marginRight: '-24px',
+                marginTop: '-24px',
+                marginBottom: '24px',
+                borderBottom: '4px solid #000'
+              }}>
+                ENTER YOUR NAME
+              </div>
+              
+              <div className="mb-4" style={{
+                backgroundColor: '#0f0f1e',
+                border: '3px solid #00ffff',
+                padding: '4px',
+                boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
+              }}>
+                <input
+                  type="text"
+                  maxLength={12}
+                  value={mobileInputValue}
+                  onChange={(e) => setMobileInputValue(e.target.value)}
+                  className="w-full px-3 py-3 text-xl text-white bg-transparent border-none focus:outline-none"
+                  placeholder="Player"
+                  autoFocus
+                  style={{
+                    fontFamily: 'monospace',
+                    letterSpacing: '2px',
+                    textTransform: 'uppercase'
+                  }}
+                />
+              </div>
+              
+              <div className="text-right mb-4" style={{
+                color: '#00ffff',
+                fontSize: '14px',
+                fontFamily: 'monospace',
+                letterSpacing: '1px'
+              }}>
+                {mobileInputValue.length}/12
+              </div>
+              
+              <button
+                onClick={() => {
+                  const name = mobileInputValue.trim() || 'Anonymous';
+                  if (mobileInputCallback) {
+                    mobileInputCallback(name);
+                  }
+                  setMobileInputVisible(false);
+                  setMobileInputCallback(null);
+                }}
+                className="w-full font-bold py-3 px-6 text-lg active:scale-95 transition-transform"
+                style={{
+                  backgroundColor: '#00ff00',
+                  color: '#000',
+                  border: '3px solid #00aa00',
+                  boxShadow: '0 4px 0 #00aa00, 0 6px 8px rgba(0,0,0,0.5)',
+                  letterSpacing: '2px',
+                  textShadow: '1px 1px 0 rgba(255,255,255,0.3)',
+                  fontFamily: 'monospace'
+                }}
+              >
+                ▶ SUBMIT SCORE ◀
+              </button>
+            </div>
           </div>
         </div>
       )}

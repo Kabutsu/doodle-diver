@@ -196,7 +196,7 @@ function playerController({ k, isMobile = false, onOxygenDepleted, getActiveMask
     const getTouchRegion = (x: number, y: number) => {
       const screenWidth = width();
       const screenHeight = height();
-      const lowerThirdY = screenHeight * 0.67;
+      const lowerThirdY = screenHeight * 0.8;
       
       if (y >= lowerThirdY) {
         // Lower third - subdivided into 3 zones
