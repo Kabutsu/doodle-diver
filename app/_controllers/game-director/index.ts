@@ -257,6 +257,7 @@ export default function gameDirector({ k, getDepth }: Args) {
       k.pos(0, topY),
       k.opacity(0),
       velocity(DEFAULT_VELOCITIES.walls),
+      k.z(5),
       tags.SIDE_WALL_TAG,
     ]);
 

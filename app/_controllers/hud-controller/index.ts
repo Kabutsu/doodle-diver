@@ -14,18 +14,21 @@ function hudController({ k, getDepth, getOxygen, getActiveMask }: Args) {
   const depthLabel = add([
     text('Depth: 0m'),
     pos(8, 8),
+    z(10),
     fixed(),
   ]) as GameObj;
 
   const oxygenLabel = add([
     text('O2: 100%'),
     pos(8, 50),
+    z(10),
     fixed(),
   ]) as GameObj;
 
   const maskLabel = add([
     text(''),
     pos(8, 92),
+    z(10),
     fixed(),
   ]) as GameObj;
 
@@ -34,7 +37,7 @@ function hudController({ k, getDepth, getOxygen, getActiveMask }: Args) {
     pos(0, 0),
     color(0, 0, 0),
     opacity(0),
-    z(100),
+    z(9),
     fixed(),
   ]) as GameObj;
 

@@ -11,7 +11,7 @@ type Args = {
 };
 
 function gameOverController({ k }: Args) {
-  const { add, text, pos, fixed, width, height, onKeyDown, destroy } = k;
+  const { add, text, pos, fixed, z, width, height, onKeyDown, destroy } = k;
 
   let isGameOver = false;
   let submitStatusText: GameObj | null = null;
@@ -34,21 +34,24 @@ function gameOverController({ k }: Args) {
       text('GAME OVER', { width: width(), align: 'center' }),
       pos(0, height() / 2 - 80),
       fixed(),
+      z(10),
     ]);
 
     add([
-      text(`Depth: ${finalDepth}m\nRuntime: ${Math.round(runTimeMs / 100)}s`, {
+      text(`Depth: ${finalDepth}m\nRuntime: ${Math.round(runTimeMs / 1000)}s`, {
         width: width(),
         align: 'center',
       }),
       pos(0, height() / 2 - 20),
       fixed(),
+      z(10),
     ]);
 
     submitStatusText = add([
       text('Submitting score...', { width: width(), align: 'center' }),
       pos(0, height() / 2 + 60),
       fixed(),
+      z(10),
     ]);
 
     let playerName = 'Anonymous';
@@ -79,6 +82,7 @@ function gameOverController({ k }: Args) {
           align: 'center',
         }),
         pos(0, height() / 2 + 60),
+        z(10),
         fixed(),
       ]);
     } catch (err) {
@@ -89,6 +93,7 @@ function gameOverController({ k }: Args) {
           align: 'center',
         }),
         pos(0, height() / 2 + 60),
+        z(10),
         fixed(),
       ]);
       // eslint-disable-next-line no-console
