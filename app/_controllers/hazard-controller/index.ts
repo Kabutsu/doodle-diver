@@ -98,14 +98,91 @@ export default function hazardController({
       if (testRectPoint(r, player.pos)) {
         setCurrentVx(metadata.strength * metadata.dir);
       }
+      
+      // Sync arrow positions with current and animate
+      const time = performance.now() / 1000;
+      const pulse = Math.sin(time * 2 + metadata.pulseOffset) * 0.15 + 0.85; // Oscillate between 0.7-1.0
+      
+      metadata.arrows.forEach((arrow, idx) => {
+        if (arrow && arrow.exists && arrow.exists()) {
+          arrow.pos.x = o.pos.x + (o.width ?? 80) / 2;
+          arrow.pos.y = o.pos.y + (o.height ?? 60) / 2;
+          
+          // Apply pulsing effect with slight offset per layer
+          const layerOffset = idx * 0.1;
+          arrow.opacity = (idx === 0 ? 0.4 : idx === 1 ? 0.8 : 0.9) * (pulse + layerOffset);
+        }
+      });
+      
+      // Spawn particles with moderate density (15-25 particles/sec)
+      const now = performance.now();
+      const particleSpawnInterval = 1000 / (15 + Math.random() * 10); // 15-25 particles/sec
+      
+      if (now - metadata.lastParticleSpawn > particleSpawnInterval) {
+        // Spawn particle at random position within current
+        const particleX = o.pos.x + Math.random() * (o.width ?? 80);
+        const particleY = o.pos.y + Math.random() * (o.height ?? 60);
+        const particleSize = 3 + Math.random() * 4; // 3-7px radius
+        
+        const particle = k.add([
+          k.circle(particleSize),
+          k.pos(particleX, particleY),
+          k.color(150, 200, 255),
+          k.opacity(0.6),
+          k.z(10),
+          tags.CURRENT_TAG + '_particle',
+        ]) as GameObj;
+        
+        metadata.particles.push(particle);
+        metadata.lastParticleSpawn = now;
+      }
+      
+      // Animate particles - move in current direction and fade out
+      metadata.particles = metadata.particles.filter((particle) => {
+        if (!particle || !particle.exists || !particle.exists()) return false;
+        
+        // Move particle in the push direction
+        const particleSpeed = metadata.strength * 0.8; // Slightly slower than push force
+        particle.pos.x += metadata.dir * particleSpeed * dt;
+        
+        // Fade out over time
+        particle.opacity -= dt * 0.8; // Fade out in ~0.75 seconds
+        
+        // Remove if too faded or out of bounds
+        if (particle.opacity <= 0 || 
+            particle.pos.x < o.pos.x - 50 || 
+            particle.pos.x > o.pos.x + (o.width ?? 80) + 50) {
+          particle.destroy();
+          return false;
+        }
+        
+        return true;
+      });
     });
 
     // Move all hazards and destroy off-screen ones
-    [ROCK_TAG, MINE_TAG, FISH_TAG, CURRENT_TAG].forEach((tag) => {
+    [ROCK_TAG, MINE_TAG, CURRENT_TAG].forEach((tag) => {
       k.get(tag).forEach((obj) => {
         const o = obj as GameObj<PosComp | VelocityComp>;
         if (o.pos.y < camTop) {
           o.tag(DESTROY);
+          
+          // Clean up arrows when current is destroyed
+          if (tag === CURRENT_TAG) {
+            const metadata = gameDirector.getCurrentMetadata(obj as GameObj);
+            if (metadata) {
+              metadata.arrows.forEach((arrow) => {
+                if (arrow && arrow.exists && arrow.exists()) {
+                  arrow.destroy();
+                }
+              });
+              metadata.particles.forEach((particle) => {
+                if (particle && particle.exists && particle.exists()) {
+                  particle.destroy();
+                }
+              });
+            }
+          }
           return;
         }
         o.speedMultiplier = speedMultiplier;
@@ -115,13 +192,16 @@ export default function hazardController({
 
     // Fish horizontal movement
     k.get(FISH_TAG).forEach((obj) => {
-      const o = obj as GameObj<PosComp>;
+      const o = obj as GameObj<PosComp | VelocityComp>;
       const metadata = gameDirector.getFishMetadata(obj as GameObj);
-      if (!metadata) return;
       
-      o.move(metadata.speedX * dt, 0);
+      o.speedMultiplier = speedMultiplier;
+      o.move((metadata?.speedX ?? 0)* dt, o.speedY * dt);
       if (o.pos.x < -50 || o.pos.x > width() + 50) {
         obj.destroy();
+      } else if (o.pos.y < camTop) {
+        o.tag(DESTROY);
+        return;
       }
     });
 

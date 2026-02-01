@@ -39,7 +39,7 @@ export const objectProperties: ObjectProperties = {
   [tags.FISH_TAG]: {
     isStatic: false,
     shape: 'rect',
-    velocity: DEFAULT_VELOCITIES.hazards,
+    velocity: [2000, 4000], // Slower vertical movement so fish can swim across screen
     sprite: sprites.fish,
   },
   [tags.CURRENT_TAG]: {

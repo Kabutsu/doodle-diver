@@ -27,6 +27,7 @@ const BOUNCE_DECAY = 0.92;
 const MIN_OXYGEN_FOR_BOOST = 15;
 const BOUNCE_DURATION_MS = 600;
 const BOUNCE_ROTATION_ANGLE = 25;
+const CURRENT_ROTATION_ANGLE = 12;
 const FLASH_DURATION_MS = 150;
 
 export type PlayerState = {
@@ -219,12 +220,19 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     player.move(currentVx * d, 0);
     player.move(0, bounceVy * d);
 
-    // Apply rotation based on bounce velocity
+    // Apply rotation based on bounce velocity or current push
     const isBouncing = now < activeBounceUntil;
+    const inCurrent = Math.abs(currentVx) > 10;
+    
     if (isBouncing && bounceType) {
       const rotationDir = bounceType === 'upward' ? -1 : 1;
       const bounceStrength = Math.abs(bounceVy) / 2000; // normalize
       player.angle = rotationDir * BOUNCE_ROTATION_ANGLE * Math.min(bounceStrength, 1);
+    } else if (inCurrent) {
+      // Tilt player based on current push direction
+      const currentDir = currentVx > 0 ? 1 : -1;
+      const currentStrength = Math.min(Math.abs(currentVx) / 600, 1); // normalize (600 = mid strength)
+      player.angle = currentDir * CURRENT_ROTATION_ANGLE * currentStrength;
     } else {
       // Smoothly return to neutral position
       player.angle *= 0.85;

@@ -58,8 +58,8 @@ export const sprites: Sprites = {
   },
   fish: {
     name: 'shark',
-    width: 72,
-    height: 40,
+    width: 115,
+    height: 64,
   },
   vent: {
     name: 'vent',

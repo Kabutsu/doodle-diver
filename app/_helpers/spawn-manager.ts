@@ -117,9 +117,9 @@ function getHazardConfig(band: DepthBand): SpawnConfig {
     case 'mid':
       return {
         enabled: true,
-        spawnChance: 0.7, // Moderate hazards
+        spawnChance: 0.75, // Increased to account for current spawns
         maxConcurrent: 3,
-        cooldownMs: 2000,
+        cooldownMs: 1800,
       };
     case 'deep':
       return {
@@ -227,16 +227,17 @@ function getHazardRatios(band: DepthBand): ObjectTypeRatio[] {
       return []; // No hazards in early
     case 'mid':
       return [
-        { type: tags.ROCK_TAG, weight: 0.4 }, // 40% rocks
-        { type: tags.MINE_TAG, weight: 0.3 }, // 30% mines
-        { type: tags.FISH_TAG, weight: 0.3 }, // 30% fish
+        { type: tags.ROCK_TAG, weight: 0.35 },   // 35% rocks
+        { type: tags.MINE_TAG, weight: 0.25 },   // 25% mines
+        { type: tags.FISH_TAG, weight: 0.2 },    // 20% fish
+        { type: tags.CURRENT_TAG, weight: 0.2 }, // 20% currents
       ];
     case 'deep':
       return [
-        { type: tags.ROCK_TAG, weight: 0.35 },   // 35% rocks
-        { type: tags.MINE_TAG, weight: 0.25 },   // 25% mines
-        { type: tags.FISH_TAG, weight: 0.25 },   // 25% fish
-        { type: tags.CURRENT_TAG, weight: 0.15 }, // 15% currents
+        { type: tags.ROCK_TAG, weight: 0.1 },    // 10% rocks
+        { type: tags.MINE_TAG, weight: 0.2 },    // 20% mines
+        { type: tags.FISH_TAG, weight: 0.4 },   // 40% fish
+        { type: tags.CURRENT_TAG, weight: 0.3 }, // 30% currents
       ];
   }
 }

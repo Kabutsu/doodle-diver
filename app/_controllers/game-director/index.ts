@@ -1,4 +1,4 @@
-import { GameObj, KAPLAYCtx } from "kaplay";
+import { GameObj, KAPLAYCtx, SpriteComp } from "kaplay";
 import spawnObject from "@/app/_helpers/spawn-object";
 import velocity from "@/app/_components/logic/velocity";
 import {
@@ -26,6 +26,10 @@ type TunnelMetadata = {
 type CurrentMetadata = {
   strength: number;
   dir: number;
+  arrows: GameObj[];
+  pulseOffset: number;
+  particles: GameObj[];
+  lastParticleSpawn: number;
 };
 
 type FishMetadata = {
@@ -156,6 +160,12 @@ export default function gameDirector({ k, getDepth }: Args) {
           const ratios = getObjectTypeRatios('hazard', depth);
           const type = selectWeightedObjectType(ratios);
           
+          // Only allow one current at a time
+          if (type === tags.CURRENT_TAG && k.get(tags.CURRENT_TAG).length > 0) {
+            // Skip spawning if a current already exists
+            return;
+          }
+          
           if (type === tags.FISH_TAG) {
             spawnFish(spawnY);
           } else if (type === tags.CURRENT_TAG) {
@@ -185,18 +195,19 @@ export default function gameDirector({ k, getDepth }: Args) {
    */
   function spawnFish(spawnY: number) {
     const left = Math.random() < 0.5;
-    const x = left ? -24 - 20 : width() + 20;
-    const speedX = (left ? 1 : -1) * (120 + Math.random() * 80);
+    // Spawn just 10px off-screen so fish enter quickly
+    const x = left ? -10 : width() + 10;
+    // Very fast horizontal speed: 2800-3800 px/s (10x player speed)
+    const speedX = (left ? 1 : -1) * (10000 + Math.random() * 1000);
 
-    const obj = k.add([
-      k.rect(24, 16),
-      k.pos(x, spawnY),
-      k.color(180, 160, 100),
-      k.area(),
-      k.body(),
-      velocity([7000, 17500]),
-      tags.FISH_TAG,
-    ]) as GameObj;
+    const obj = spawnObject({
+      k,
+      tag: tags.FISH_TAG,
+      xSpawnPos: x,
+    });
+    
+    // Flip fish sprite based on swim direction
+    (obj as GameObj<SpriteComp>).flipX = !left; // Flip when swimming right (left=true means spawning from left, swimming right)
 
     fishMetadataMap.set(obj, { speedX });
   }
@@ -205,22 +216,79 @@ export default function gameDirector({ k, getDepth }: Args) {
    * Spawn current with direction metadata
    */
   function spawnCurrent(spawnY: number) {
-    const w = 80 + Math.random() * 100;
-    const h = 60 + Math.random() * 80;
-    const x = 40 + Math.random() * (width() - 80 - w);
+    // Make currents take up 80-90% of screen width
+    const w = width() * (0.8 + Math.random() * 0.1);
+    // Height 2-5x player height (player ~40px, so 80-200px)
+    const h = 80 + Math.random() * 120;
+    // Center horizontally with some variation
+    const x = (width() - w) / 2 + (Math.random() - 0.5) * 40;
     const dir = Math.random() < 0.5 ? 1 : -1;
+    // Very strong push force: 6000-12000 px/s (10x player speed)
+    const strength = 6000 + Math.random() * 6000;
+    const pulseOffset = Math.random() * Math.PI * 2; // Random phase for pulsing
 
     const obj = k.add([
       k.rect(w, h),
       k.pos(x, spawnY),
       k.color(100, 150, 200),
-      k.opacity(0.3),
+      k.opacity(0.35),
       k.area(),
-      velocity([7000, 17500]),
+      velocity([5000, 12000]), // Slower movement than other hazards
       tags.CURRENT_TAG,
     ]) as GameObj;
 
-    currentMetadataMap.set(obj, { strength: 80, dir });
+    // Create multiple layers of arrows for depth effect
+    const arrowSize = 30;
+    const arrowSpacing = 80;
+    const numArrows = Math.floor(w / arrowSpacing);
+    const arrowText = dir > 0 ? '→' : '←';
+    const arrows: GameObj[] = [];
+    
+    // Background layer (darker, larger)
+    let arrowsText = '';
+    for (let i = 0; i < numArrows; i++) {
+      arrowsText += arrowText + '  ';
+    }
+    const bgArrow = k.add([
+      k.text(arrowsText, { size: arrowSize + 4 }),
+      k.pos(x + w / 2, spawnY + h / 2),
+      k.color(80, 120, 180),
+      k.opacity(0.4),
+      k.anchor('center'),
+      tags.CURRENT_TAG + '_arrow',
+    ]) as GameObj;
+    arrows.push(bgArrow);
+    
+    // Main layer (bright)
+    const mainArrow = k.add([
+      k.text(arrowsText, { size: arrowSize }),
+      k.pos(x + w / 2, spawnY + h / 2),
+      k.color(200, 230, 255),
+      k.opacity(0.8),
+      k.anchor('center'),
+      tags.CURRENT_TAG + '_arrow',
+    ]) as GameObj;
+    arrows.push(mainArrow);
+    
+    // Highlight layer (small, very bright)
+    const highlightArrow = k.add([
+      k.text(arrowsText, { size: arrowSize - 6 }),
+      k.pos(x + w / 2, spawnY + h / 2),
+      k.color(255, 255, 255),
+      k.opacity(0.9),
+      k.anchor('center'),
+      tags.CURRENT_TAG + '_arrow',
+    ]) as GameObj;
+    arrows.push(highlightArrow);
+
+    currentMetadataMap.set(obj, { 
+      strength, 
+      dir, 
+      arrows, 
+      pulseOffset, 
+      particles: [],
+      lastParticleSpawn: performance.now(),
+    });
   }
 
   /**
