@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import kaplay from 'kaplay';
 import gameDirector, { type GameDirectorReturn } from '@/app/_controllers/game-director';
 import oxygenTankController from '@/app/_controllers/oxygen-tank-controller';
@@ -8,13 +8,17 @@ import hazardController from '@/app/_controllers/hazard-controller';
 import hudController from '@/app/_controllers/hud-controller';
 import maskController, { type MaskControllerReturn } from '@/app/_controllers/mask-controller';
 import playerController from '@/app/_controllers/player-controller';
+import titleScreenController from '@/app/_controllers/title-screen-controller';
+import type { KAPLAYCtx } from 'kaplay';
 
 const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cleanupRef = useRef<(() => void) | undefined>(undefined);
+  const [gameState, setGameState] = useState<'menu' | 'playing'>('menu');
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
+    let gameCleanup: (() => void) | undefined;
 
     (async () => {
       const k = kaplay({
@@ -47,72 +51,90 @@ const GameCanvas = () => {
         }
       });
 
-      const gameOverCtrl = gameOverController({ k });
+      // Function to start the actual game
+      const startGame = (kCtx: KAPLAYCtx) => {
+        const gameOverCtrl = gameOverController({ k: kCtx });
 
-      const gameDirectorRef: { current: GameDirectorReturn | null } = { current: null };
-      const maskCtrlRef: { current: MaskControllerReturn | null } = { current: null };
+        const gameDirectorRef: { current: GameDirectorReturn | null } = { current: null };
+        const maskCtrlRef: { current: MaskControllerReturn | null } = { current: null };
 
-      const playerCtrl = playerController({
+        const playerCtrl = playerController({
+          k: kCtx,
+          onOxygenDepleted: () => {
+            const state = playerCtrl.getState();
+            gameOverCtrl.handleGameOver(
+              { depth: state.depth, startTime: state.startTime },
+              () => {
+                gameDirectorRef.current?.cleanup();
+              }
+            );
+          },
+          getActiveMask: () => maskCtrlRef.current?.getActiveMask() ?? null,
+        });
+
+        // Initialize game director first (manages spawning)
+        gameDirectorRef.current = gameDirector({
+          k: kCtx,
+          getDepth: () => playerCtrl.getState().depth,
+        });
+
+        // Initialize effect controllers (handle mechanics only)
+        maskCtrlRef.current = maskController({
+          k: kCtx,
+          gameDirector: gameDirectorRef.current,
+          getFallSpeed: playerCtrl.getFallSpeed,
+        });
+
+        oxygenTankController({ 
+          k: kCtx,
+          getFallSpeed: playerCtrl.getFallSpeed,
+        });
+
+        bounceController({
+          k: kCtx,
+          setBounceVy: playerCtrl.setBounceVy,
+          setBounceVx: playerCtrl.setBounceVx,
+          getFallSpeed: playerCtrl.getFallSpeed,
+        });
+
+        hazardController({
+          k: kCtx,
+          player: playerCtrl.player,
+          setSlowDebuffUntil: playerCtrl.setSlowDebuffUntil,
+          setCurrentVx: playerCtrl.setCurrentVx,
+          getFallSpeed: playerCtrl.getFallSpeed,
+          gameDirector: gameDirectorRef.current,
+        });
+
+        const hudCtrl = hudController({
+          k: kCtx,
+          getDepth: () => playerCtrl.getState().depth,
+          getOxygen: () => playerCtrl.getState().oxygen,
+          getActiveMask: () => maskCtrlRef.current?.getActiveMask() ?? null,
+          getBoostKickState: () => playerCtrl.getBoostKickState(),
+        });
+
+        gameCleanup = () => {
+          gameDirectorRef.current?.cleanup();
+          playerCtrl.cleanup();
+          hudCtrl.cleanup();
+          gameOverCtrl.cleanup();
+        };
+      };
+
+      // Show title screen initially
+      const titleCtrl = titleScreenController({
         k,
-        onOxygenDepleted: () => {
-          const state = playerCtrl.getState();
-          gameOverCtrl.handleGameOver(
-            { depth: state.depth, startTime: state.startTime },
-            () => {
-              gameDirectorRef.current?.cleanup();
-            }
-          );
+        onStart: () => {
+          titleCtrl.cleanup();
+          setGameState('playing');
+          startGame(k);
         },
-        getActiveMask: () => maskCtrlRef.current?.getActiveMask() ?? null,
-      });
-
-      // Initialize game director first (manages spawning)
-      gameDirectorRef.current = gameDirector({
-        k,
-        getDepth: () => playerCtrl.getState().depth,
-      });
-
-      // Initialize effect controllers (handle mechanics only)
-      maskCtrlRef.current = maskController({
-        k,
-        gameDirector: gameDirectorRef.current,
-        getFallSpeed: playerCtrl.getFallSpeed,
-      });
-
-      oxygenTankController({ 
-        k,
-        getFallSpeed: playerCtrl.getFallSpeed,
-      });
-
-      bounceController({
-        k,
-        setBounceVy: playerCtrl.setBounceVy,
-        setBounceVx: playerCtrl.setBounceVx,
-        getFallSpeed: playerCtrl.getFallSpeed,
-      });
-
-      hazardController({
-        k,
-        player: playerCtrl.player,
-        setSlowDebuffUntil: playerCtrl.setSlowDebuffUntil,
-        setCurrentVx: playerCtrl.setCurrentVx,
-        getFallSpeed: playerCtrl.getFallSpeed,
-        gameDirector: gameDirectorRef.current,
-      });
-
-      const hudCtrl = hudController({
-        k,
-        getDepth: () => playerCtrl.getState().depth,
-        getOxygen: () => playerCtrl.getState().oxygen,
-        getActiveMask: () => maskCtrlRef.current?.getActiveMask() ?? null,
-        getBoostKickState: () => playerCtrl.getBoostKickState(),
       });
 
       cleanup = () => {
-        gameDirectorRef.current?.cleanup();
-        playerCtrl.cleanup();
-        hudCtrl.cleanup();
-        gameOverCtrl.cleanup();
+        titleCtrl.cleanup();
+        gameCleanup?.();
       };
 
       cleanupRef.current = cleanup;

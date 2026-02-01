@@ -1,0 +1,258 @@
+import { GameObj, KAPLAYCtx } from 'kaplay';
+import { sprites } from '@/app/_helpers/sprites';
+
+type HighScore = {
+  player_name: string;
+  depth: number;
+};
+
+type Args = {
+  k: KAPLAYCtx;
+  onStart: () => void;
+};
+
+function titleScreenController({ k, onStart }: Args) {
+  const { add, text, pos, rect, color, opacity, z, fixed, onUpdate, destroy, width, height, anchor, onKeyPress, sprite, loadSprite, dt } = k;
+
+  // Load player sprite
+  loadSprite(sprites.diver.name, `/${sprites.diver.name}.png`);
+
+  const CENTRE_X = width() / 2;
+  const PLAYER_MIN_POS = 0.1;
+  const PLAYER_START_Y = height() * PLAYER_MIN_POS;
+
+  // Semi-transparent overlay for better text readability
+  const overlay = add([
+    rect(width(), height()),
+    pos(0, 0),
+    color(0, 0, 0),
+    opacity(0.4),
+    z(10),
+    fixed(),
+  ]) as GameObj;
+
+  // Title with animation
+  const title = add([
+    text('DOODLE DIVER', { size: 48 }),
+    pos(CENTRE_X, 80),
+    anchor('center'),
+    z(11),
+    fixed(),
+    color(255, 255, 100),
+  ]) as GameObj;
+
+  // Player sprite with bobbing animation
+  const playerSprite = add([
+    pos(CENTRE_X, PLAYER_START_Y),
+    sprite(sprites.diver.name, { width: sprites.diver.width, height: sprites.diver.height }),
+    anchor('center'),
+    z(11),
+    fixed(),
+  ]) as GameObj;
+
+  // Controls section
+  const controlsTitle = add([
+    text('CONTROLS', { size: 24 }),
+    pos(CENTRE_X, 200),
+    anchor('center'),
+    z(11),
+    fixed(),
+    color(100, 200, 255),
+  ]) as GameObj;
+
+  const controls = [
+    'Arrow Keys: Move',
+    'Space: Boost (2.5x speed, 1s)',
+    'Up/Down (press): Kick vertically',
+  ];
+
+  const controlTexts = controls.map((ctrl, i) => {
+    return add([
+      text(ctrl, { size: 16 }),
+      pos(CENTRE_X, 240 + i * 30),
+      anchor('center'),
+      z(11),
+      fixed(),
+      color(200, 200, 200),
+    ]) as GameObj;
+  });
+
+  // Game tips section
+  const tipsTitle = add([
+    text('SURVIVE THE DEPTHS!', { size: 24 }),
+    pos(CENTRE_X, 360),
+    anchor('center'),
+    z(11),
+    fixed(),
+    color(100, 255, 100),
+  ]) as GameObj;
+
+  const tips = [
+    'Collect oxygen tanks to stay alive',
+    'Pick up masks for special effects',
+    'Avoid rocks, mines, and fish',
+    'Bounce off jellyfish',
+    'Watch your oxygen level!',
+  ];
+
+  const tipTexts = tips.map((tip, i) => {
+    return add([
+      text(tip, { size: 14 }),
+      pos(CENTRE_X, 400 + i * 25),
+      anchor('center'),
+      z(11),
+      fixed(),
+      color(180, 180, 180),
+    ]) as GameObj;
+  });
+
+  // High scores section
+  const scoresTitle = add([
+    text('TOP DIVERS', { size: 24 }),
+    pos(CENTRE_X, 550),
+    anchor('center'),
+    z(11),
+    fixed(),
+    color(255, 200, 100),
+  ]) as GameObj;
+
+  const scoreTexts: GameObj[] = [
+    add([
+      text('Loading...', { size: 16 }),
+      pos(CENTRE_X, 590),
+      anchor('center'),
+      z(11),
+      fixed(),
+      color(200, 200, 200),
+    ]) as GameObj,
+  ];
+
+  // Start prompt with blinking animation
+  const startPrompt = add([
+    text('PRESS SPACE TO START', { size: 20 }),
+    pos(CENTRE_X, height() - 60),
+    anchor('center'),
+    z(11),
+    fixed(),
+    color(255, 255, 255),
+  ]) as GameObj;
+
+  // Fetch high scores
+  fetch('/api/top-scores')
+    .then(res => res.json())
+    .then((data: { scores: HighScore[] }) => {
+      // Clear loading text
+      scoreTexts.forEach(st => destroy(st));
+      scoreTexts.length = 0;
+
+      const topScores = data.scores.slice(0, 3);
+      if (topScores.length === 0) {
+        scoreTexts.push(
+          add([
+            text('No scores yet - be the first!', { size: 16 }),
+            pos(CENTRE_X, 590),
+            anchor('center'),
+            z(11),
+            fixed(),
+            color(200, 200, 200),
+          ]) as GameObj
+        );
+      } else {
+        topScores.forEach((score, i) => {
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+          scoreTexts.push(
+            add([
+              text(`${medal} ${score.player_name}: ${Math.floor(score.depth)}m`, { size: 16 }),
+              pos(CENTRE_X, 590 + i * 30),
+              anchor('center'),
+              z(11),
+              fixed(),
+              color(200, 200, 200),
+            ]) as GameObj
+          );
+        });
+      }
+    })
+    .catch(() => {
+      // Clear loading text and show error
+      scoreTexts.forEach(st => destroy(st));
+      scoreTexts.length = 0;
+      scoreTexts.push(
+        add([
+          text('Scores unavailable', { size: 16 }),
+          pos(CENTRE_X, 590),
+          anchor('center'),
+          z(11),
+          fixed(),
+          color(200, 100, 100),
+        ]) as GameObj
+      );
+    });
+
+  // Animation state
+  let time = 0;
+  let titleScale = 1;
+  let titleScaleDir = 1;
+  let blinkTimer = 0;
+  let playerBobOffset = 0;
+
+  // Key press listener
+  const keyPressEvent = onKeyPress('space', () => {
+    onStart();
+  });
+
+  // Update animations
+  const updateEvent = onUpdate(() => {
+    const deltaTime = dt();
+    time += deltaTime;
+
+    // Title pulsing animation
+    titleScale += titleScaleDir * deltaTime * 0.3;
+    if (titleScale > 1.1) {
+      titleScale = 1.1;
+      titleScaleDir = -1;
+    } else if (titleScale < 0.95) {
+      titleScale = 0.95;
+      titleScaleDir = 1;
+    }
+    title.scale = k.vec2(titleScale);
+
+    // Player bobbing animation
+    playerBobOffset = Math.sin(time * 2) * 15;
+    playerSprite.pos.y = PLAYER_START_Y + playerBobOffset;
+
+    // Blinking start prompt
+    blinkTimer += deltaTime;
+    if (blinkTimer > 0.5) {
+      blinkTimer = 0;
+      startPrompt.hidden = !startPrompt.hidden;
+    }
+
+    // Subtle color shift on controls title
+    const hue = (time * 30) % 60 + 180; // Cycle through blue-cyan range
+    controlsTitle.color = k.hsl2rgb(hue / 360, 0.7, 0.6);
+  });
+
+  const cleanup = () => {
+    // Cancel event handlers
+    keyPressEvent.cancel();
+    updateEvent.cancel();
+
+    // Destroy all UI elements
+    destroy(overlay);
+    destroy(title);
+    destroy(playerSprite);
+    destroy(controlsTitle);
+    controlTexts.forEach(ct => destroy(ct));
+    destroy(tipsTitle);
+    tipTexts.forEach(tt => destroy(tt));
+    destroy(scoresTitle);
+    scoreTexts.forEach(st => destroy(st));
+    destroy(startPrompt);
+  };
+
+  return { cleanup };
+}
+
+export default titleScreenController;
+export type TitleScreenControllerReturn = ReturnType<typeof titleScreenController>;

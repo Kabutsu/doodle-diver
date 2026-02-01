@@ -11,17 +11,17 @@ export interface MaskDef {
 
 export const MASK_DEFS: Record<MaskType, MaskDef> = {
   pressure: {
-    durationMin: 5,
-    durationMax: 10,
-    fallSpeedMult: 2.1,
-    oxygenDrainMult: 2,
+    durationMin: 3,
+    durationMax: 8,
+    fallSpeedMult: 2,
+    oxygenDrainMult: 1.5,
     bounceDecayMult: 0.7,
     pauseOxygenDrain: false,
   },
   rebreather: {
     durationMin: 6,
-    durationMax: 12,
-    fallSpeedMult: 0.5,
+    durationMax: 10,
+    fallSpeedMult: 0.75,
     oxygenDrainMult: 0.5,
     bounceDecayMult: 1,
     pauseOxygenDrain: false,
