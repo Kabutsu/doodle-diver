@@ -12,6 +12,7 @@ import {
 import * as tags from "@/app/_helpers/tags";
 import { sprites } from "@/app/_helpers/sprites";
 import { type MaskType } from "@/app/_components/logic/mask/types";
+import { DEFAULT_VELOCITIES } from "@/app/_helpers/object-properties";
 
 const SPAWN_LOOP_INTERVAL_MS = 1500; // Unified spawn check every 1.5 seconds
 
@@ -269,26 +270,30 @@ export default function gameDirector({ k, getDepth }: Args) {
     const gapRight = gapLeft + gapWidth;
     const WALL_HEIGHT = 400;
 
-    // Left wall
-    k.add([
-      k.rect(gapLeft, WALL_HEIGHT),
+    const container = k.add([
+      k.rect(width(), WALL_HEIGHT),
       k.pos(0, topY),
-      k.color(30, 20, 60),
-      k.area(),
-      velocity([8000, 12000]),
-      k.body({ isStatic: true }),
+      k.opacity(0),
+      velocity(DEFAULT_VELOCITIES.walls),
       tags.SIDE_WALL_TAG,
     ]);
 
-    // Right wall
-    k.add([
-      k.rect(width() - gapRight, WALL_HEIGHT),
-      k.pos(gapRight, topY),
+    // Left wall
+    container.add([
+      k.rect(gapLeft, WALL_HEIGHT),
+      k.pos(0, 0),
       k.color(30, 20, 60),
       k.area(),
-      velocity([8000, 12000]),
       k.body({ isStatic: true }),
-      tags.SIDE_WALL_TAG,
+    ]);
+
+    // Right wall
+    container.add([
+      k.rect(width() - gapRight, WALL_HEIGHT),
+      k.pos(gapRight, 0),
+      k.color(30, 20, 60),
+      k.area(),
+      k.body({ isStatic: true }),
     ]);
 
     tunnelMetadata.push({

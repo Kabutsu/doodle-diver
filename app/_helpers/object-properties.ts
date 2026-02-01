@@ -1,7 +1,7 @@
 import * as tags from "@/app/_helpers/tags";
 import { Sprite, sprites } from "@/app/_helpers/sprites";
 
-const DEFAULT_VELOCITIES: { [key: string]: [number, number] } = {
+export const DEFAULT_VELOCITIES: { [key: string]: [number, number] } = {
   hazards: [7000, 17500],
   masks: [15000, 25000],
   helpers: [8000, 20000],
