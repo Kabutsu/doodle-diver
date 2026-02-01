@@ -62,6 +62,9 @@ function gameOverController({ k, isMobile = false, onRequestMobileInput, onResta
     const runTimeMs = Math.round(performance.now() - state.startTime);
     const score = finalDepth;
 
+    // Play game over sound
+    k.play('game-over', { volume: 1.0 });
+
     // Semi-transparent overlay
     const overlay = add([
       rect(width(), height()),

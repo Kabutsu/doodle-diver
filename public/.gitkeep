@@ -1,0 +1,9 @@
+# This file ensures the public directory is tracked by git
+# Place your sound files here:
+# - bg-music.mp3
+# - mask-ping.mp3
+# - oxygen-pop.mp3
+# - mine-explosion.mp3
+# - hazard-thud.mp3
+# - jellyfish-squish.mp3
+# - game-over.mp3

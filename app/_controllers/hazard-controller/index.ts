@@ -55,6 +55,7 @@ export default function hazardController({
     const h = p as GameObj<HealthComp>;
     h.hurt(ROCK_DAMAGE);
     k.shake(5);
+    k.play('hazard-thud', { volume: 0.6 });
     b.destroy();
   });
 
@@ -63,6 +64,7 @@ export default function hazardController({
     setSlowDebuffUntil(performance.now() + MINE_DEBUFF_MS);
     h.hurt(MINE_DAMAGE);
     k.shake(10);
+    k.play('mine-explosion', { volume: 0.8 });
     b.destroy();
   });
 
@@ -71,6 +73,7 @@ export default function hazardController({
     const fallSpeed = getFallSpeed();
     h.hurt(FISH_DAMAGE);
     k.shake(4);
+    k.play('hazard-thud', { volume: 0.6 });
     if (fallSpeed > HIGH_SPEED_THRESHOLD) {
       h.hurt(HIGH_SPEED_EXTRA);
     }

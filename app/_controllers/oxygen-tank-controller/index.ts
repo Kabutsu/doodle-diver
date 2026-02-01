@@ -31,6 +31,7 @@ export default function oxygenTankController({ k, getFallSpeed }: Args) {
   onCollide(OXYGEN_TANK_TAG, PLAYER_TAG, (b, p) => {
     b.destroy();
     (p as GameObj<HealthComp>).heal(HEAL_AMOUNT);
+    k.play('oxygen-pop', { volume: 0.8 });
   });
 
   onCollide(OXYGEN_TANK_TAG, SIDE_WALL_TAG, (b) => {

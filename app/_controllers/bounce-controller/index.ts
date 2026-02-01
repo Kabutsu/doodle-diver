@@ -48,6 +48,7 @@ export default function bounceController({
     (p as GameObj<HealthComp>).hurt(JELLY_HURT);
     setBounceVy(JELLY_VY, 600, 'upward');
     k.shake(4);
+    k.play('jellyfish-squish', { volume: 0.7 });
   });
 
   onCollide(AIR_VENT_TAG, PLAYER_TAG, () => {

@@ -10,7 +10,7 @@ import maskController, { type MaskControllerReturn } from '@/app/_controllers/ma
 import playerController from '@/app/_controllers/player-controller';
 import titleScreenController from '@/app/_controllers/title-screen-controller';
 import type { KAPLAYCtx } from 'kaplay';
-import { isMobile } from '@/app/_helpers/platform-detection';
+import { isMobile, isIOS } from '@/app/_helpers/platform-detection';
 
 const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -52,6 +52,24 @@ const GameCanvas = () => {
       // Load and set background image
       k.loadSprite('background', '/background.png');
       
+      // Load sound effects
+      k.loadSound('bg-music', '/bg-music.mp3');
+      k.loadSound('mask-ping', '/mask-ping.mp3');
+      k.loadSound('oxygen-pop', '/oxygen-pop.mp3');
+      k.loadSound('mine-explosion', '/mine-explosion.mp3');
+      k.loadSound('hazard-thud', '/hazard-thud.mp3');
+      k.loadSound('jellyfish-squish', '/jellyfish-squish.mp3');
+      k.loadSound('game-over', '/game-over.mp3');
+      
+      // Start background music (full volume for title screen)
+      // On iOS, we need to wait for user interaction before playing audio
+      let bgMusic: any = null;
+      const iOS = isIOS();
+      
+      if (!iOS) {
+        bgMusic = k.play('bg-music', { loop: true, volume: 1.0 });
+      }
+      
       const bgObj = k.add([
         k.sprite('background'),
         k.pos(0, 0),
@@ -75,6 +93,10 @@ const GameCanvas = () => {
 
       // Function to start the actual game
       const startGame = (kCtx: KAPLAYCtx) => {
+        // Lower background music volume during gameplay
+        if (bgMusic) {
+          bgMusic.volume = 0.6;
+        }
         const gameOverCtrl = gameOverController({ 
           k: kCtx,
           isMobile: mobile,
@@ -90,6 +112,11 @@ const GameCanvas = () => {
             
             // Return to menu
             setGameState('menu');
+            
+            // Restore background music volume for title screen
+            if (bgMusic) {
+              bgMusic.volume = 1.0;
+            }
             
             // Reinitialize title screen
             titleCleanup = titleScreenController({
@@ -182,6 +209,11 @@ const GameCanvas = () => {
         k,
         isMobile: mobile,
         onStart: () => {
+          // Start background music on first user interaction (iOS requirement)
+          if (iOS && !bgMusic) {
+            bgMusic = k.play('bg-music', { loop: true, volume: 0.6 });
+          }
+          
           titleCtrl.cleanup();
           setGameState('playing');
           startGame(k);

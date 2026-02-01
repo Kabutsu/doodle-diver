@@ -30,6 +30,7 @@ export default function maskController({ k, gameDirector, getFallSpeed }: Args) 
     
     const duration = getMaskDuration(type);
     activeMask = { type, expiresAt: performance.now() + duration * 1000 };
+    k.play('mask-ping', { volume: 0.7 });
     pickup.destroy();
   });
 
