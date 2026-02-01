@@ -87,6 +87,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
   const startTime = performance.now();
   let isGameOver = false;
   let oxygenDepletedCalled = false;
+  let gameReady = false;
 
   let bounceVy = 0;
   let bounceVx = 0;
@@ -117,7 +118,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
   };
 
   const applyBoostOrKick = (cost: number, key: Key) => {
-    if (player.oxygen < MIN_OXYGEN_FOR_BOOST) return;
+    if (!gameReady || player.oxygen < MIN_OXYGEN_FOR_BOOST) return;
 
     const now = performance.now();
     if (now < boostKickCooldownUntil || now < slowDebuffUntil) return;
@@ -193,6 +194,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
   onUpdate(() => {
     if (isGameOver) return;
 
+    gameReady = true;
     const d = dt();
     const mask = getActiveMask?.() ?? null;
     const now = performance.now();

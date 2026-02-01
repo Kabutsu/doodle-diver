@@ -414,6 +414,21 @@ export default function gameDirector({ k, getDepth }: Args) {
   // Cleanup function
   const cleanup = () => {
     isCleanedUp = true;
+    
+    // Explicitly destroy arrows and particles from currents
+    currentMetadataMap.forEach((metadata) => {
+      metadata.arrows.forEach((arrow) => {
+        if (arrow && arrow.exists && arrow.exists()) {
+          k.destroy(arrow);
+        }
+      });
+      metadata.particles.forEach((particle) => {
+        if (particle && particle.exists && particle.exists()) {
+          k.destroy(particle);
+        }
+      });
+    });
+    
     currentMetadataMap.clear();
     fishMetadataMap.clear();
     tunnelMetadata.length = 0;

@@ -23,10 +23,13 @@ const GameCanvas = () => {
     let titleCleanup: { cleanup: () => void } | undefined;
 
     (async () => {
+      const width = Math.min(window.innerWidth, 480);
+      const height = Math.min(window.innerHeight, 1080);
+
       const k = kaplay({
         canvas: canvasRef.current!,
-        width: 480,
-        height: window.innerHeight,
+        width,
+        height,
       });
 
       kRef.current = k;
@@ -48,10 +51,10 @@ const GameCanvas = () => {
         const bgHeight = bgObj.height;
         const bgWidth = bgObj.width;
         if (bgHeight > 0) {
-          const scale = window.innerHeight / bgHeight;
+          const scale = height / bgHeight;
           bgObj.scale = k.vec2(scale);
           // Center horizontally in the 480px width
-          bgObj.pos.x = (480 - bgWidth * scale) / 2;
+          bgObj.pos.x = (width - bgWidth * scale) / 2;
         }
       });
 
