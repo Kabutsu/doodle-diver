@@ -2,7 +2,7 @@ import { GameObj, KAPLAYCtx } from 'kaplay';
 import { sprites } from '@/app/_helpers/sprites';
 
 type HighScore = {
-  player_name: string;
+  player: string;
   depth: number;
 };
 
@@ -139,14 +139,14 @@ function titleScreenController({ k, onStart }: Args) {
   ]) as GameObj;
 
   // Fetch high scores
-  fetch('/api/top-scores')
+  fetch('/api/top-scores?limit=3')
     .then(res => res.json())
-    .then((data: { scores: HighScore[] }) => {
+    .then((data: { rows: HighScore[] }) => {
       // Clear loading text
       scoreTexts.forEach(st => destroy(st));
       scoreTexts.length = 0;
 
-      const topScores = data.scores.slice(0, 3);
+      const topScores = data.rows.slice(0, 3);
       if (topScores.length === 0) {
         scoreTexts.push(
           add([
@@ -163,7 +163,7 @@ function titleScreenController({ k, onStart }: Args) {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
           scoreTexts.push(
             add([
-              text(`${medal} ${score.player_name}: ${Math.floor(score.depth)}m`, { size: 16 }),
+              text(`${medal} ${score.player}: ${Math.floor(score.depth)}m`, { size: 16 }),
               pos(CENTRE_X, 590 + i * 30),
               anchor('center'),
               z(11),

@@ -12,13 +12,11 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const limit = Math.min(50, Number(searchParams.get('limit')) || 10);
 
-
   const { data, error } = await supabase
     .from('leaderboard')
     .select('player, score, depth, created_at')
     .order('score', { ascending: false })
     .limit(limit);
-
 
   if (error) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
