@@ -14,11 +14,13 @@ import type { KAPLAYCtx } from 'kaplay';
 const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cleanupRef = useRef<(() => void) | undefined>(undefined);
-  const [gameState, setGameState] = useState<'menu' | 'playing'>('menu');
+  const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu');
+  const kRef = useRef<KAPLAYCtx | null>(null);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
     let gameCleanup: (() => void) | undefined;
+    let titleCleanup: { cleanup: () => void } | undefined;
 
     (async () => {
       const k = kaplay({
@@ -26,6 +28,8 @@ const GameCanvas = () => {
         width: 480,
         height: window.innerHeight,
       });
+
+      kRef.current = k;
 
       // Load and set background image
       k.loadSprite('background', '/background.png');
@@ -53,7 +57,30 @@ const GameCanvas = () => {
 
       // Function to start the actual game
       const startGame = (kCtx: KAPLAYCtx) => {
-        const gameOverCtrl = gameOverController({ k: kCtx });
+        const gameOverCtrl = gameOverController({ 
+          k: kCtx,
+          onRestart: () => {
+            // Cleanup game
+            gameCleanup?.();
+            gameCleanup = undefined;
+            
+            // Return to menu
+            setGameState('menu');
+            
+            // Reinitialize title screen
+            titleCleanup = titleScreenController({
+              k: kCtx,
+              onStart: () => {
+                if (titleCleanup) {
+                  titleCleanup.cleanup();
+                  titleCleanup = undefined;
+                }
+                setGameState('playing');
+                startGame(kCtx);
+              },
+            });
+          },
+        });
 
         const gameDirectorRef: { current: GameDirectorReturn | null } = { current: null };
         const maskCtrlRef: { current: MaskControllerReturn | null } = { current: null };
@@ -132,8 +159,10 @@ const GameCanvas = () => {
         },
       });
 
+      titleCleanup = titleCtrl;
+
       cleanup = () => {
-        titleCtrl.cleanup();
+        titleCleanup?.cleanup();
         gameCleanup?.();
       };
 
