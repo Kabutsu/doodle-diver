@@ -120,8 +120,8 @@ export default function hazardController({
 
     // Move tunnel walls
     k.get(SIDE_WALL_TAG).forEach((obj) => {
-      const o = obj as GameObj<PosComp | VelocityComp>;
-      if (o.pos.y + 400 < camTop) {
+      const o = obj as GameObj<RectComp | PosComp | VelocityComp>;
+      if (o.pos.y + o.height < camTop) {
         obj.destroy();
         return;
       }

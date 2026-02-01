@@ -6,18 +6,15 @@ import { sprites } from '@/app/_helpers/sprites';
 
 export const PLAYER_TAG = 'player';
 
-const PLAYER_WIDTH = 75;
-const PLAYER_HEIGHT = 57;
-
 const BASE_FALL_SPEED = 1500;
 const VERTI_SPEED = 7500;
 const HORIZ_SPEED = 220;
 const BASE_DEPLETION = 2;
+const PRESSURE_DEPLETION_MULT = 7.5;
 const DEPTH_PER_PIXEL = 0.01;
 
 const PLAYER_TARGET_POS = 0.25;
 const PLAYER_MIN_POS = 0.1;
-const PLAYER_MAX_POS = 0.4;
 
 const BOOST_COST = 7.5;
 const KICK_COST = 2.5;
@@ -177,6 +174,11 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
 
   let lastFallSpeed = BASE_FALL_SPEED;
 
+  const getPressureDrainMult = () => {
+    if (player.pos.y < 0) return PRESSURE_DEPLETION_MULT;
+    return 1;
+  }
+
   onUpdate(() => {
     if (isGameOver) return;
 
@@ -191,7 +193,7 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     const fallSpeed = BASE_FALL_SPEED * fallMult * slowMult;
     lastFallSpeed = fallSpeed;
 
-    const drainMult = getOxygenDrainMultiplier(depth) * (maskDef?.oxygenDrainMult ?? 1);
+    const drainMult = getOxygenDrainMultiplier(depth) * (maskDef?.oxygenDrainMult ?? 1) * getPressureDrainMult();
     const pauseDrain = maskDef?.pauseOxygenDrain ?? false;
     const bounceDecay = maskDef?.bounceDecayMult ?? 1;
 

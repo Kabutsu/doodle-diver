@@ -227,34 +227,16 @@ export default function gameDirector({ k, getDepth }: Args) {
    * Spawn mask pickup with random type
    */
   function spawnMask() {
-    const camPos = getCamPos();
-    const spawnY = camPos.y + height() / 2 + 60 + Math.random() * 100;
     const x = getRandomXPos(width());
     
     const maskTypes: MaskType[] = ['pressure', 'rebreather', 'blind'];
     const type = maskTypes[Math.floor(Math.random() * maskTypes.length)];
-
-    const MASK_COLORS: Record<MaskType, [number, number, number]> = {
-      pressure: [255, 100, 100],
-      rebreather: [100, 255, 100],
-      blind: [200, 200, 255],
-    };
 
     const obj = spawnObject({
       k,
       tag: tags.MASK_PICKUP_TAG,
       xSpawnPos: x,
     });
-
-    // const obj = k.add([
-    //   k.rect(20, 20),
-    //   k.pos(x, spawnY),
-    //   k.color(...MASK_COLORS[type]),
-    //   k.area(),
-    //   velocity([15000, 25000]),
-    //   k.body(),
-    //   tags.MASK_PICKUP_TAG,
-    // ]) as GameObj;
 
     maskTypeMap.set(obj, type);
   }
@@ -268,7 +250,7 @@ export default function gameDirector({ k, getDepth }: Args) {
     const gapWidth = Math.max(width() * 0.4, width() * (0.4 + Math.random() * 0.35));
     const gapLeft = Math.random() * (width() - gapWidth);
     const gapRight = gapLeft + gapWidth;
-    const WALL_HEIGHT = 400;
+    const WALL_HEIGHT = 400 + (Math.random() * 600);
 
     const container = k.add([
       k.rect(width(), WALL_HEIGHT),
