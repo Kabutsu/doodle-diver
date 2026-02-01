@@ -14,10 +14,11 @@ const JELLY_VY = 220;
 const VENT_VY = 420;
 const SHARP_ROCK_DAMAGE = 12;
 const SHARP_ROCK_SPIKE = -180;
-const JELLY_HEAL = 10;
+const JELLY_HEAL = 3;
 
 const HIGH_SPEED_THRESHOLD = 25;
 const HIGH_SPEED_EXTRA_DAMAGE = 6;
+const BASE_FALL_SPEED = 1500;
 
 type Args = {
   k: KAPLAYCtx;
@@ -66,6 +67,8 @@ export default function bounceController({
     if (isCleanedUp) return;
 
     const dt = k.dt();
+    const fallSpeed = getFallSpeed();
+    const speedMultiplier = fallSpeed / BASE_FALL_SPEED;
 
     const camTop = getCamPos().y - height() / 2 - 50;
     [JELLYFISH_TAG, AIR_VENT_TAG, SHARP_ROCK_TAG].forEach((tag) => {
@@ -75,6 +78,7 @@ export default function bounceController({
           o.tag(DESTROY);
           return;
         }
+        o.speedMultiplier = speedMultiplier;
         o.move(0, o.speedY * dt);
       });
     });

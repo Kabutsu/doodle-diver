@@ -80,6 +80,9 @@ export default function hazardController({
 
     const dt = k.dt();
     const camTop = getCamPos().y - height() / 2 - 80;
+    const fallSpeed = getFallSpeed();
+    const baseSpeed = 1500;
+    const speedMultiplier = fallSpeed / baseSpeed;
 
     // Handle currents - check if player is inside and apply force
     setCurrentVx(0);
@@ -102,6 +105,7 @@ export default function hazardController({
           o.tag(DESTROY);
           return;
         }
+        o.speedMultiplier = speedMultiplier;
         o.move(0, o.speedY * dt);
       });
     });
@@ -125,6 +129,7 @@ export default function hazardController({
         obj.destroy();
         return;
       }
+      o.speedMultiplier = speedMultiplier;
       o.move(0, o.speedY * dt);
     });
 

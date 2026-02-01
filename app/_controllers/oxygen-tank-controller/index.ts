@@ -8,12 +8,15 @@ import * as tags from "@/app/_helpers/tags";
 export const OXYGEN_TANK_TAG = tags.OXYGEN_TANK_TAG;
 
 const DESTROY = 'oxygenTank_DESTROY';
+const BASE_FALL_SPEED = 1500;
+const HEAL_AMOUNT = 10;
 
 type Args = {
   k: KAPLAYCtx;
+  getFallSpeed: () => number;
 };
 
-export default function oxygenTankController({ k }: Args) {
+export default function oxygenTankController({ k, getFallSpeed }: Args) {
   const {
     onCollide,
     onUpdate,
@@ -27,7 +30,7 @@ export default function oxygenTankController({ k }: Args) {
   // Collision handlers
   onCollide(OXYGEN_TANK_TAG, PLAYER_TAG, (b, p) => {
     b.destroy();
-    (p as GameObj<HealthComp>).heal(15);
+    (p as GameObj<HealthComp>).heal(HEAL_AMOUNT);
   });
 
   onCollide(OXYGEN_TANK_TAG, SIDE_WALL_TAG, (b) => {
@@ -41,6 +44,8 @@ export default function oxygenTankController({ k }: Args) {
     }
 
     const dt = k.dt();
+    const fallSpeed = getFallSpeed();
+    const speedMultiplier = fallSpeed / BASE_FALL_SPEED;
     const camTop = getCamPos().y - (height() / 2);
 
     k.get(OXYGEN_TANK_TAG).forEach(
@@ -51,6 +56,7 @@ export default function oxygenTankController({ k }: Args) {
           return;
         }
 
+        b.speedMultiplier = speedMultiplier;
         b.move(0, b.speedY * dt);
       }
     );

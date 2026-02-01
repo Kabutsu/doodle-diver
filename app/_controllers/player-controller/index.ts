@@ -9,8 +9,8 @@ export const PLAYER_TAG = 'player';
 const BASE_FALL_SPEED = 1500;
 const VERTI_SPEED = 7500;
 const HORIZ_SPEED = 220;
-const BASE_DEPLETION = 2;
-const PRESSURE_DEPLETION_MULT = 7.5;
+const BASE_DEPLETION = 3;
+const PRESSURE_DEPLETION_MULT = 5;
 const DEPTH_PER_PIXEL = 0.01;
 
 const PLAYER_TARGET_POS = 0.25;
@@ -65,7 +65,6 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
   const PLAYER_TARGET_Y = Math.round(height() * PLAYER_TARGET_POS);
 
   const player = add([
-    // rect(26, 34),
     pos(CENTRE_X, height() * PLAYER_MIN_POS),
     area(),
     health(),
@@ -74,11 +73,11 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     PLAYER_TAG,
   ]);
 
-  const MIN_X = -(3 * player.width / 4);
-  const MAX_X = width() - (player.width / 4);
+  const MIN_X = -2 * sprites.diver.width / 3;
+  const MAX_X = width() - (sprites.diver.width / 3);
+  console.log('playerWidth;MIN_X;MAX_X', sprites.diver.width, MIN_X, MAX_X);
 
   let depth = 0;
-  let currentDepth = 0;
   const startTime = performance.now();
   let isGameOver = false;
   let oxygenDepletedCalled = false;
@@ -199,13 +198,16 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
 
     player.move(bounceVx * d, 0);
     player.move(currentVx * d, 0);
+    player.move(0, bounceVy * d);
 
     bounceVy *= BOUNCE_DECAY * bounceDecay;
     bounceVx *= BOUNCE_DECAY;
 
-    const netDown = Math.max(0, fallSpeed * d - bounceVy * d);
-    currentDepth += netDown;
-    depth = Math.max(depth, currentDepth * DEPTH_PER_PIXEL);
+    // Only increase depth when player is below target position
+    if (player.pos.y >= PLAYER_TARGET_Y - player.height) {
+      const currentDepth = depth + (lastFallSpeed * d * DEPTH_PER_PIXEL);
+      depth = Math.max(depth, currentDepth);
+    }
 
     if (!pauseDrain) {
       player.hurt(BASE_DEPLETION * drainMult * d);

@@ -76,9 +76,13 @@ const GameCanvas = () => {
       maskCtrlRef.current = maskController({
         k,
         gameDirector: gameDirectorRef.current,
+        getFallSpeed: playerCtrl.getFallSpeed,
       });
 
-      oxygenTankController({ k });
+      oxygenTankController({ 
+        k,
+        getFallSpeed: playerCtrl.getFallSpeed,
+      });
 
       bounceController({
         k,

@@ -9,12 +9,15 @@ export const MASK_PICKUP_TAG = tags.MASK_PICKUP_TAG;
 
 export type ActiveMask = { type: MaskType; expiresAt: number } | null;
 
+const BASE_FALL_SPEED = 1500;
+
 type Args = {
   k: KAPLAYCtx;
   gameDirector: GameDirectorReturn;
+  getFallSpeed: () => number;
 };
 
-export default function maskController({ k, gameDirector }: Args) {
+export default function maskController({ k, gameDirector, getFallSpeed }: Args) {
   const { onCollide, onUpdate, getCamPos, height } = k;
 
   let activeMask: ActiveMask = null;
@@ -39,6 +42,8 @@ export default function maskController({ k, gameDirector }: Args) {
       activeMask = null;
     }
     
+    const fallSpeed = getFallSpeed();
+    const speedMultiplier = fallSpeed / BASE_FALL_SPEED;
     const camTop = getCamPos().y - height() / 2 - 50;
     k.get(MASK_PICKUP_TAG).forEach((obj) => {
       const o = obj as GameObj<PosComp | VelocityComp>;
@@ -46,6 +51,7 @@ export default function maskController({ k, gameDirector }: Args) {
         obj.destroy();
         return;
       }
+      o.speedMultiplier = speedMultiplier;
       o.move(0, o.speedY * k.dt());
     });
   });
