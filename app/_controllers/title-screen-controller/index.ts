@@ -122,7 +122,7 @@ function titleScreenController({ k, isMobile = false, onStart }: Args) {
   // High scores section
   const scoresTitle = add([
     text('TOP DIVERS', { size: 24 }),
-    pos(CENTRE_X, 550),
+    pos(CENTRE_X, isMobile ? 400 : 550),
     anchor('center'),
     z(11),
     fixed(),
@@ -132,7 +132,7 @@ function titleScreenController({ k, isMobile = false, onStart }: Args) {
   const scoreTexts: GameObj[] = [
     add([
       text('Loading...', { size: 16 }),
-      pos(CENTRE_X, 590),
+      pos(CENTRE_X, isMobile ? 430 : 590),
       anchor('center'),
       z(11),
       fixed(),
@@ -194,7 +194,7 @@ function titleScreenController({ k, isMobile = false, onStart }: Args) {
         scoreTexts.push(
           add([
             text('No scores yet - be the first!', { size: 16 }),
-            pos(CENTRE_X, 590),
+            pos(CENTRE_X, isMobile ? 430 : 590),
             anchor('center'),
             z(11),
             fixed(),
@@ -207,7 +207,7 @@ function titleScreenController({ k, isMobile = false, onStart }: Args) {
           scoreTexts.push(
             add([
               text(`${medal} ${score.player}: ${Math.floor(score.depth)}m`, { size: 16 }),
-              pos(CENTRE_X, 590 + i * 30),
+              pos(CENTRE_X, (isMobile ? 430 : 590) + i * 30),
               anchor('center'),
               z(11),
               fixed(),
@@ -224,7 +224,7 @@ function titleScreenController({ k, isMobile = false, onStart }: Args) {
       scoreTexts.push(
         add([
           text('Scores unavailable', { size: 16 }),
-          pos(CENTRE_X, 590),
+          pos(CENTRE_X, isMobile ? 430 : 590),
           anchor('center'),
           z(11),
           fixed(),
