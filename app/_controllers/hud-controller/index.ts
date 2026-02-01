@@ -15,8 +15,8 @@ type Args = {
   getPlayerPos?: () => { x: number; y: number };
 };
 
-function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickState, getPlayerPos }: Args) {
-  const { add, text, pos, rect, color, opacity, z, fixed, onUpdate, destroy, width, height, anchor, circle } = k;
+function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickState }: Args) {
+  const { add, text, pos, rect, color, opacity, z, fixed, onUpdate, destroy, width, height, anchor } = k;
 
   const depthLabel = add([
     text('Depth: 0m'),
@@ -57,23 +57,57 @@ function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickStat
     fixed(),
   ]) as GameObj;
 
-  // Vignette effect for blind mask (concentric circles)
-  const maxDimension = Math.max(width(), height());
-  const vignetteCircles: GameObj[] = [];
+  // Vignette effect for blind mask (edge rectangles creating darkness at edges)
+  const vignetteRects: GameObj[] = [];
   
-  // Create 5 concentric circles with increasing radius and opacity
-  for (let i = 0; i < 5; i++) {
-    const radius = maxDimension * (0.15 + i * 0.25);
-    const vignetteCircle = add([
-      circle(radius),
-      pos(width() / 2, height() / 2),
+  // Create vignette layers - multiple edge rectangles with increasing opacity
+  // This creates a gradient effect from edges (dark) to center (clear)
+  const vignetteLayerCount = 8;
+  const maxVignetteThickness = Math.min(width(), height()) * 0.4; // 40% of screen
+  
+  for (let layer = 0; layer < vignetteLayerCount; layer++) {
+    const progress = layer / vignetteLayerCount;
+    const thickness = maxVignetteThickness * (1 - progress);
+    
+    // Top rect
+    vignetteRects.push(add([
+      rect(width(), thickness),
+      pos(0, 0),
       color(0, 0, 0),
       opacity(0),
       z(9),
       fixed(),
-      anchor('center'),
-    ]) as GameObj;
-    vignetteCircles.push(vignetteCircle);
+    ]) as GameObj);
+    
+    // Bottom rect
+    vignetteRects.push(add([
+      rect(width(), thickness),
+      pos(0, height() - thickness),
+      color(0, 0, 0),
+      opacity(0),
+      z(9),
+      fixed(),
+    ]) as GameObj);
+    
+    // Left rect (excluding top/bottom already covered)
+    vignetteRects.push(add([
+      rect(thickness, height() - 2 * thickness),
+      pos(0, thickness),
+      color(0, 0, 0),
+      opacity(0),
+      z(9),
+      fixed(),
+    ]) as GameObj);
+    
+    // Right rect (excluding top/bottom already covered)
+    vignetteRects.push(add([
+      rect(thickness, height() - 2 * thickness),
+      pos(width() - thickness, thickness),
+      color(0, 0, 0),
+      opacity(0),
+      z(9),
+      fixed(),
+    ]) as GameObj);
   }
 
   let isCleanedUp = false;
@@ -98,26 +132,24 @@ function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickStat
       maskLabel.text = `${name} ${secs}s`;
       maskLabel.hidden = false;
       if (mask.type === 'blind') {
-        // Update vignette position to follow player
-        const playerPos = getPlayerPos?.() ?? { x: width() / 2, y: height() / 2 };
-        vignetteCircles.forEach((circle, i) => {
-          circle.pos.x = playerPos.x;
-          circle.pos.y = playerPos.y;
-          const circleOpacity = (i + 1) * 0.18;
-          circle.opacity = circleOpacity;
+        // Activate vignette effect - darken edges with gradient
+        vignetteRects.forEach((rect, i) => {
+          const layer = Math.floor(i / 4); // 4 rects per layer
+          const layerOpacity = (layer + 1) / vignetteLayerCount * 0.85;
+          rect.opacity = layerOpacity;
         });
       } else {
-        // Hide vignette circles when not blind
-        vignetteCircles.forEach(circle => {
-          circle.opacity = 0;
+        // Hide vignette when not blind
+        vignetteRects.forEach(rect => {
+          rect.opacity = 0;
         });
       }
     } else {
       maskLabel.text = '';
       maskLabel.hidden = true;
-      // Hide vignette circles when no mask active
-      vignetteCircles.forEach(circle => {
-        circle.opacity = 0;
+      // Hide vignette when no mask active
+      vignetteRects.forEach(rect => {
+        rect.opacity = 0;
       });
     }
 
@@ -150,7 +182,7 @@ function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickStat
     destroy(maskLabel);
     destroy(boostKickLabel);
     destroy(depthDarknessOverlay);
-    vignetteCircles.forEach(circle => destroy(circle));
+    vignetteRects.forEach(rect => destroy(rect));
   };
 
   return { cleanup };
