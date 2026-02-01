@@ -13,7 +13,7 @@ export const MASK_DEFS: Record<MaskType, MaskDef> = {
   pressure: {
     durationMin: 5,
     durationMax: 10,
-    fallSpeedMult: 2.5,
+    fallSpeedMult: 2.1,
     oxygenDrainMult: 2,
     bounceDecayMult: 0.7,
     pauseOxygenDrain: false,

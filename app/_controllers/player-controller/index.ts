@@ -257,6 +257,19 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     setBounceVx,
     setSlowDebuffUntil,
     setCurrentVx,
+    getBoostKickState: () => {
+      const now = performance.now();
+      const hasMinOxygen = player.oxygen >= MIN_OXYGEN_FOR_BOOST;
+      const onCooldown = now < boostKickCooldownUntil;
+      const isSlowed = now < slowDebuffUntil;
+      
+      return {
+        canUse: hasMinOxygen && !onCooldown && !isSlowed,
+        cooldownRemaining: Math.max(0, Math.ceil((boostKickCooldownUntil - now) / 1000)),
+        hasMinOxygen,
+        isSlowed,
+      };
+    },
     cleanup,
   };
 }

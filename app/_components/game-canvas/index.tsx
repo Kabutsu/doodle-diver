@@ -105,6 +105,7 @@ const GameCanvas = () => {
         getDepth: () => playerCtrl.getState().depth,
         getOxygen: () => playerCtrl.getState().oxygen,
         getActiveMask: () => maskCtrlRef.current?.getActiveMask() ?? null,
+        getBoostKickState: () => playerCtrl.getBoostKickState(),
       });
 
       cleanup = () => {

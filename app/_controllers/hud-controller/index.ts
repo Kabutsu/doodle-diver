@@ -6,10 +6,16 @@ type Args = {
   getDepth: () => number;
   getOxygen: () => number;
   getActiveMask?: () => ActiveMask;
+  getBoostKickState?: () => {
+    canUse: boolean;
+    cooldownRemaining: number;
+    hasMinOxygen: boolean;
+    isSlowed: boolean;
+  };
 };
 
-function hudController({ k, getDepth, getOxygen, getActiveMask }: Args) {
-  const { add, text, pos, rect, color, opacity, z, fixed, onUpdate, destroy, width, height } = k;
+function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickState }: Args) {
+  const { add, text, pos, rect, color, opacity, z, fixed, onUpdate, destroy, width, height, anchor } = k;
 
   const depthLabel = add([
     text('Depth: 0m'),
@@ -28,6 +34,14 @@ function hudController({ k, getDepth, getOxygen, getActiveMask }: Args) {
   const maskLabel = add([
     text(''),
     pos(8, 92),
+    z(10),
+    fixed(),
+  ]) as GameObj;
+
+  const boostKickLabel = add([
+    text('', { size: 20 }),
+    pos(width() - 10, 10),
+    anchor('topright'),
     z(10),
     fixed(),
   ]) as GameObj;
@@ -65,6 +79,27 @@ function hudController({ k, getDepth, getOxygen, getActiveMask }: Args) {
       maskLabel.hidden = true;
       blindOverlay.opacity = 0;
     }
+
+    // Boost indicator
+    const boostState = getBoostKickState?.();
+    if (boostState) {
+      if (boostState.canUse) {
+        boostKickLabel.text = 'Boost: READY';
+        boostKickLabel.color = k.rgb(0, 255, 0); // Green
+      } else if (boostState.cooldownRemaining > 0) {
+        boostKickLabel.text = `Boost: ${boostState.cooldownRemaining}s`;
+        boostKickLabel.color = k.rgb(255, 255, 0); // Yellow
+      } else if (!boostState.hasMinOxygen) {
+        boostKickLabel.text = 'Boost: LOW O2';
+        boostKickLabel.color = k.rgb(255, 0, 0); // Red
+      } else if (boostState.isSlowed) {
+        boostKickLabel.text = 'Boost: SLOWED';
+        boostKickLabel.color = k.rgb(255, 0, 0); // Red
+      }
+      boostKickLabel.hidden = false;
+    } else {
+      boostKickLabel.hidden = true;
+    }
   });
 
   const cleanup = () => {
@@ -72,6 +107,7 @@ function hudController({ k, getDepth, getOxygen, getActiveMask }: Args) {
     destroy(depthLabel);
     destroy(oxygenLabel);
     destroy(maskLabel);
+    destroy(boostKickLabel);
     destroy(blindOverlay);
   };
 
