@@ -425,7 +425,12 @@ function gameOverController({ k, isMobile = false, onRequestMobileInput, onResta
         uiElements.push(promptText);
 
         restartButton.onClick(() => {
-          onRestart();
+          // Cleanup game over UI before restarting to prevent state issues
+          cleanup();
+          // Use setTimeout to ensure cleanup completes before restarting
+          setTimeout(() => {
+            onRestart();
+          }, 0);
         });
       } else {
         // Desktop: show keyboard prompt
@@ -482,7 +487,12 @@ function gameOverController({ k, isMobile = false, onRequestMobileInput, onResta
         uiElements.push(restartButtonText);
 
         restartButton.onClick(() => {
-          onRestart();
+          // Cleanup game over UI before restarting to prevent state issues
+          cleanup();
+          // Use setTimeout to ensure cleanup completes before restarting
+          setTimeout(() => {
+            onRestart();
+          }, 0);
         });
       } else {
         statusText = add([
