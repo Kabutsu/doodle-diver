@@ -14,7 +14,7 @@ const JELLY_VY = 220;
 const VENT_VY = 420;
 const SHARP_ROCK_DAMAGE = 12;
 const SHARP_ROCK_SPIKE = -180;
-const JELLY_HEAL = 3;
+const JELLY_HURT = 5;
 
 const HIGH_SPEED_THRESHOLD = 25;
 const HIGH_SPEED_EXTRA_DAMAGE = 6;
@@ -45,7 +45,7 @@ export default function bounceController({
   // Collision handlers
   onCollide(JELLYFISH_TAG, PLAYER_TAG, (b, p) => {
     b.destroy();
-    (p as GameObj<HealthComp>).heal(JELLY_HEAL);
+    (p as GameObj<HealthComp>).hurt(JELLY_HURT);
     setBounceVy(JELLY_VY);
   });
 

@@ -64,6 +64,7 @@ function titleScreenController({ k, onStart }: Args) {
     'Arrow Keys: Move',
     'Space: Boost (2.5x speed, 1s)',
     'Up/Down (press): Kick vertically',
+    'Kicking & boosting consume oxygen!',
   ];
 
   const controlTexts = controls.map((ctrl, i) => {
@@ -90,8 +91,8 @@ function titleScreenController({ k, onStart }: Args) {
   const tips = [
     'Collect oxygen tanks to stay alive',
     'Pick up masks for special effects',
-    'Avoid rocks, mines, and fish',
-    'Bounce off jellyfish',
+    'Avoid rocks, mines, and jellyfish',
+    'Bounce off swirling vortexes',
     'Watch your oxygen level!',
   ];
 
