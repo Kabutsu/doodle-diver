@@ -8,11 +8,12 @@ type HighScore = {
 
 type Args = {
   k: KAPLAYCtx;
+  isMobile?: boolean;
   onStart: () => void;
 };
 
-function titleScreenController({ k, onStart }: Args) {
-  const { add, text, pos, rect, color, opacity, z, fixed, onUpdate, destroy, width, height, anchor, onKeyPress, sprite, loadSprite, dt } = k;
+function titleScreenController({ k, isMobile = false, onStart }: Args) {
+  const { add, text, pos, rect, color, opacity, z, fixed, onUpdate, destroy, width, height, anchor, onKeyPress, sprite, loadSprite, dt, area } = k;
 
   // Load player sprite
   loadSprite(sprites.diver.name, `/${sprites.diver.name}.png`);
@@ -60,7 +61,13 @@ function titleScreenController({ k, onStart }: Args) {
     color(100, 200, 255),
   ]) as GameObj;
 
-  const controls = [
+  const controls = isMobile ? [
+    'Tap & Hold: Move left/right',
+    'Double-Tap Side: Boost (2.5x speed, 1s)',
+    'Tap Lower Corners: Diagonal kick',
+    'Tap Lower Center: Down kick',
+    'Kicking & boosting consume oxygen!',
+  ] : [
     'Arrow Keys: Move',
     'Space: Boost (2.5x speed, 1s)',
     'Up/Down (press): Kick vertically',
@@ -69,8 +76,8 @@ function titleScreenController({ k, onStart }: Args) {
 
   const controlTexts = controls.map((ctrl, i) => {
     return add([
-      text(ctrl, { size: 16 }),
-      pos(CENTRE_X, 240 + i * 30),
+      text(ctrl, { size: isMobile ? 14 : 16 }),
+      pos(CENTRE_X, 240 + i * (isMobile ? 28 : 30)),
       anchor('center'),
       z(11),
       fixed(),
@@ -128,15 +135,46 @@ function titleScreenController({ k, onStart }: Args) {
     ]) as GameObj,
   ];
 
-  // Start prompt with blinking animation
-  const startPrompt = add([
-    text('PRESS SPACE TO START', { size: 20 }),
-    pos(CENTRE_X, height() - 60),
-    anchor('center'),
-    z(11),
-    fixed(),
-    color(255, 255, 255),
-  ]) as GameObj;
+  // Start prompt with blinking animation (or button for mobile)
+  let startPrompt: GameObj;
+  let startButton: GameObj | null = null;
+  
+  if (isMobile) {
+    // Create a button for mobile
+    startButton = add([
+      rect(280, 60, { radius: 8 }),
+      pos(CENTRE_X, height() - 70),
+      anchor('center'),
+      z(11),
+      fixed(),
+      color(100, 200, 100),
+      area(),
+      'startButton',
+    ]) as GameObj;
+    
+    startPrompt = add([
+      text('TAP TO START', { size: 24 }),
+      pos(CENTRE_X, height() - 70),
+      anchor('center'),
+      z(12),
+      fixed(),
+      color(255, 255, 255),
+    ]) as GameObj;
+    
+    // Add click handler for mobile button
+    startButton.onClick(() => {
+      onStart();
+    });
+  } else {
+    startPrompt = add([
+      text('PRESS SPACE TO START', { size: 20 }),
+      pos(CENTRE_X, height() - 60),
+      anchor('center'),
+      z(11),
+      fixed(),
+      color(255, 255, 255),
+    ]) as GameObj;
+  }
 
   // Fetch high scores
   fetch('/api/top-scores?limit=3')
@@ -197,8 +235,8 @@ function titleScreenController({ k, onStart }: Args) {
   let blinkTimer = 0;
   let playerBobOffset = 0;
 
-  // Key press listener
-  const keyPressEvent = onKeyPress('space', () => {
+  // Key press listener (desktop only)
+  const keyPressEvent = isMobile ? null : onKeyPress('space', () => {
     onStart();
   });
 
@@ -222,11 +260,19 @@ function titleScreenController({ k, onStart }: Args) {
     playerBobOffset = Math.sin(time * 2) * 15;
     playerSprite.pos.y = PLAYER_START_Y + playerBobOffset;
 
-    // Blinking start prompt
+    // Blinking start prompt (desktop) or pulsing button (mobile)
     blinkTimer += deltaTime;
     if (blinkTimer > 0.5) {
       blinkTimer = 0;
-      startPrompt.hidden = !startPrompt.hidden;
+      if (!isMobile) {
+        startPrompt.hidden = !startPrompt.hidden;
+      }
+    }
+    
+    // Pulsing button effect for mobile
+    if (isMobile && startButton) {
+      const pulseScale = 1 + Math.sin(time * 3) * 0.05;
+      startButton.scale = k.vec2(pulseScale);
     }
 
     // Subtle color shift on controls title
@@ -236,7 +282,7 @@ function titleScreenController({ k, onStart }: Args) {
 
   const cleanup = () => {
     // Cancel event handlers
-    keyPressEvent.cancel();
+    if (keyPressEvent) keyPressEvent.cancel();
     updateEvent.cancel();
 
     // Destroy all UI elements
@@ -250,6 +296,7 @@ function titleScreenController({ k, onStart }: Args) {
     destroy(scoresTitle);
     scoreTexts.forEach(st => destroy(st));
     destroy(startPrompt);
+    if (startButton) destroy(startButton);
   };
 
   return { cleanup };

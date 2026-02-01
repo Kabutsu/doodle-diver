@@ -40,11 +40,12 @@ export type ActiveMask = { type: MaskType; expiresAt: number } | null;
 
 type Args = {
   k: KAPLAYCtx;
+  isMobile?: boolean;
   onOxygenDepleted: () => void;
   getActiveMask?: () => ActiveMask;
 };
 
-function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
+function playerController({ k, isMobile = false, onOxygenDepleted, getActiveMask }: Args) {
   const {
     add,
     pos,
@@ -184,6 +185,93 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
     isKicking = false;
   })
 
+  // Touch controls for mobile
+  const activeTouches = new Map<number, { x: number; y: number; startTime: number; region: string }>();
+  const lastTapTimes = { left: 0, right: 0 };
+  const DOUBLE_TAP_THRESHOLD_MS = 300;
+
+  if (isMobile && typeof window !== 'undefined') {
+    const canvas = k.canvas;
+    
+    const getTouchRegion = (x: number, y: number) => {
+      const screenWidth = width();
+      const screenHeight = height();
+      const lowerThirdY = screenHeight * 0.67;
+      
+      if (y >= lowerThirdY) {
+        // Lower third - subdivided into 3 zones
+        const leftThird = screenWidth / 3;
+        const rightThird = screenWidth * 2 / 3;
+        
+        if (x < leftThird) return 'lower-left';
+        if (x > rightThird) return 'lower-right';
+        return 'lower-center';
+      }
+      
+      // Upper two-thirds - left or right
+      const midX = screenWidth / 2;
+      return x < midX ? 'left' : 'right';
+    };
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const now = performance.now();
+      
+      Array.from(e.changedTouches).forEach((touch) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (touch.clientX - rect.left) * (width() / rect.width);
+        const y = (touch.clientY - rect.top) * (height() / rect.height);
+        const region = getTouchRegion(x, y);
+        
+        activeTouches.set(touch.identifier, { x, y, startTime: now, region });
+        
+        // Check for double-tap boost on sides
+        if (region === 'left' || region === 'right') {
+          const timeSinceLastTap = now - lastTapTimes[region];
+          if (timeSinceLastTap < DOUBLE_TAP_THRESHOLD_MS) {
+            // Double-tap detected - trigger boost
+            applyBoostOrKick(BOOST_COST, 'space');
+          }
+          lastTapTimes[region] = now;
+        }
+        
+        // Auto-trigger kick for diagonal lower zones
+        if (region.startsWith('lower-')) {
+          applyBoostOrKick(KICK_COST, 'down');
+        }
+      });
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      Array.from(e.changedTouches).forEach((touch) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (touch.clientX - rect.left) * (width() / rect.width);
+        const y = (touch.clientY - rect.top) * (height() / rect.height);
+        const region = getTouchRegion(x, y);
+        
+        const existing = activeTouches.get(touch.identifier);
+        if (existing) {
+          activeTouches.set(touch.identifier, { ...existing, x, y, region });
+        }
+      });
+    });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      Array.from(e.changedTouches).forEach((touch) => {
+        activeTouches.delete(touch.identifier);
+      });
+    });
+
+    canvas.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      Array.from(e.changedTouches).forEach((touch) => {
+        activeTouches.delete(touch.identifier);
+      });
+    });
+  }
+
   let lastFallSpeed = BASE_FALL_SPEED;
 
   const getPressureDrainMult = () => {
@@ -207,6 +295,46 @@ function playerController({ k, onOxygenDepleted, getActiveMask }: Args) {
       player.opacity = 0.3 + (flashProgress * 0.7);
     } else {
       player.opacity = 1;
+    }
+
+    // Process touch controls for mobile
+    if (isMobile && !isGameOver) {
+      const mult = getSpeedMultiplier();
+      let touchMovingLeft = false;
+      let touchMovingRight = false;
+      let touchMovingDown = false;
+      
+      activeTouches.forEach((touch) => {
+        const { region } = touch;
+        
+        if (region === 'left') {
+          touchMovingLeft = true;
+        } else if (region === 'right') {
+          touchMovingRight = true;
+        } else if (region === 'lower-left') {
+          touchMovingLeft = true;
+          touchMovingDown = true;
+        } else if (region === 'lower-right') {
+          touchMovingRight = true;
+          touchMovingDown = true;
+        } else if (region === 'lower-center') {
+          touchMovingDown = true;
+        }
+      });
+      
+      // Apply horizontal movement
+      if (touchMovingLeft && !touchMovingRight) {
+        player.move(-HORIZ_SPEED * mult, 0);
+        player.flipX = true;
+      } else if (touchMovingRight && !touchMovingLeft) {
+        player.move(HORIZ_SPEED * mult, 0);
+        player.flipX = false;
+      }
+      
+      // Apply vertical movement (kick)
+      if (isKicking && touchMovingDown) {
+        player.move(0, VERTI_SPEED / KICK_MODIFIER);
+      }
     }
 
     const fallMult = getFallSpeedMultiplier(depth) * (maskDef?.fallSpeedMult ?? 1);

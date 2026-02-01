@@ -10,12 +10,16 @@ import maskController, { type MaskControllerReturn } from '@/app/_controllers/ma
 import playerController from '@/app/_controllers/player-controller';
 import titleScreenController from '@/app/_controllers/title-screen-controller';
 import type { KAPLAYCtx } from 'kaplay';
+import { isMobile } from '@/app/_helpers/platform-detection';
 
 const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cleanupRef = useRef<(() => void) | undefined>(undefined);
   const [, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu');
   const kRef = useRef<KAPLAYCtx | null>(null);
+  const [mobileInputVisible, setMobileInputVisible] = useState(false);
+  const [mobileInputValue, setMobileInputValue] = useState('');
+  const [mobileInputCallback, setMobileInputCallback] = useState<((name: string) => void) | null>(null);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
@@ -23,8 +27,19 @@ const GameCanvas = () => {
     let titleCleanup: { cleanup: () => void } | undefined;
 
     (async () => {
-      const width = Math.min(window.innerWidth, 480);
-      const height = Math.min(window.innerHeight, 1080);
+      const mobile = isMobile();
+      let width: number;
+      let height: number;
+      
+      if (mobile) {
+        // Portrait mode: max 1080w x 1440h
+        width = Math.min(window.innerWidth, 1080);
+        height = Math.min(window.innerHeight, 1440);
+      } else {
+        // Desktop: original limits
+        width = Math.min(window.innerWidth, 480);
+        height = Math.min(window.innerHeight, 1080);
+      }
 
       const k = kaplay({
         canvas: canvasRef.current!,
@@ -62,6 +77,12 @@ const GameCanvas = () => {
       const startGame = (kCtx: KAPLAYCtx) => {
         const gameOverCtrl = gameOverController({ 
           k: kCtx,
+          isMobile: mobile,
+          onRequestMobileInput: (callback) => {
+            setMobileInputValue('');
+            setMobileInputCallback(() => callback);
+            setMobileInputVisible(true);
+          },
           onRestart: () => {
             // Cleanup game
             gameCleanup?.();
@@ -73,6 +94,7 @@ const GameCanvas = () => {
             // Reinitialize title screen
             titleCleanup = titleScreenController({
               k: kCtx,
+              isMobile: mobile,
               onStart: () => {
                 if (titleCleanup) {
                   titleCleanup.cleanup();
@@ -90,6 +112,7 @@ const GameCanvas = () => {
 
         const playerCtrl = playerController({
           k: kCtx,
+          isMobile: mobile,
           onOxygenDepleted: () => {
             const state = playerCtrl.getState();
             gameOverCtrl.handleGameOver(
@@ -138,6 +161,7 @@ const GameCanvas = () => {
 
         const hudCtrl = hudController({
           k: kCtx,
+          isMobile: mobile,
           getDepth: () => playerCtrl.getState().depth,
           getOxygen: () => playerCtrl.getState().oxygen,
           getActiveMask: () => maskCtrlRef.current?.getActiveMask() ?? null,
@@ -156,6 +180,7 @@ const GameCanvas = () => {
       // Show title screen initially
       const titleCtrl = titleScreenController({
         k,
+        isMobile: mobile,
         onStart: () => {
           titleCtrl.cleanup();
           setGameState('playing');
@@ -179,10 +204,42 @@ const GameCanvas = () => {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="block my-0 mx-auto touch-none"
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="block my-0 mx-auto touch-none"
+      />
+      {mobileInputVisible && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-70">
+          <div className="bg-linear-to-b from-blue-900 to-blue-950 border-4 border-yellow-400 rounded-lg p-6 max-w-sm mx-4 shadow-2xl">
+            <h2 className="text-yellow-300 text-2xl font-bold text-center mb-4">Enter Your Name</h2>
+            <input
+              type="text"
+              maxLength={12}
+              value={mobileInputValue}
+              onChange={(e) => setMobileInputValue(e.target.value)}
+              className="w-full px-4 py-3 text-xl text-white bg-blue-950 border-2 border-cyan-400 rounded-lg focus:outline-none focus:border-yellow-400 mb-2"
+              placeholder="Your name..."
+              autoFocus
+            />
+            <div className="text-gray-400 text-sm text-right mb-4">{mobileInputValue.length}/12</div>
+            <button
+              onClick={() => {
+                const name = mobileInputValue.trim() || 'Anonymous';
+                if (mobileInputCallback) {
+                  mobileInputCallback(name);
+                }
+                setMobileInputVisible(false);
+                setMobileInputCallback(null);
+              }}
+              className="w-full bg-linear-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-lg active:scale-95 transition-transform"
+            >
+              Submit Score
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

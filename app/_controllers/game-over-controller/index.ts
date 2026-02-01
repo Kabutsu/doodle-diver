@@ -8,6 +8,8 @@ export type GameOverState = {
 
 type Args = {
   k: KAPLAYCtx;
+  isMobile?: boolean;
+  onRequestMobileInput?: (callback: (name: string) => void) => void;
   onRestart: () => void;
 };
 
@@ -21,8 +23,8 @@ type LeaderboardResponse = {
   rows: LeaderboardEntry[];
 };
 
-function gameOverController({ k, onRestart }: Args) {
-  const { add, text, pos, fixed, z, width, height, onKeyPress, onUpdate, destroy, rect, color, opacity, anchor, dt } = k;
+function gameOverController({ k, isMobile = false, onRequestMobileInput, onRestart }: Args) {
+  const { add, text, pos, fixed, z, width, height, onKeyPress, onUpdate, destroy, rect, color, opacity, anchor, dt, area } = k;
 
   const CENTRE_X = width() / 2;
   const MAX_NAME_LENGTH = 12;
@@ -97,76 +99,113 @@ function gameOverController({ k, onRestart }: Args) {
     uiElements.push(statsText);
 
     // Input phase UI
-    const namePrompt = add([
-      text('Enter your name:', { size: 24 }),
-      pos(CENTRE_X, 280),
-      anchor('center'),
-      z(11),
-      fixed(),
-      color(100, 200, 255),
-    ]) as GameObj;
-    uiElements.push(namePrompt);
+    if (!isMobile) {
+      // Desktop: show keyboard input UI
+      const namePrompt = add([
+        text('Enter your name:', { size: 24 }),
+        pos(CENTRE_X, 280),
+        anchor('center'),
+        z(11),
+        fixed(),
+        color(100, 200, 255),
+      ]) as GameObj;
+      uiElements.push(namePrompt);
 
-    inputDisplay = add([
-      text('_', { size: 32 }),
-      pos(CENTRE_X, 330),
-      anchor('center'),
-      z(11),
-      fixed(),
-      color(255, 255, 255),
-    ]) as GameObj;
-    uiElements.push(inputDisplay);
+      inputDisplay = add([
+        text('_', { size: 32 }),
+        pos(CENTRE_X, 330),
+        anchor('center'),
+        z(11),
+        fixed(),
+        color(255, 255, 255),
+      ]) as GameObj;
+      uiElements.push(inputDisplay);
 
-    characterCounter = add([
-      text('0/12', { size: 16 }),
-      pos(CENTRE_X, 370),
-      anchor('center'),
-      z(11),
-      fixed(),
-      color(150, 150, 150),
-    ]) as GameObj;
-    uiElements.push(characterCounter);
+      characterCounter = add([
+        text('0/12', { size: 16 }),
+        pos(CENTRE_X, 370),
+        anchor('center'),
+        z(11),
+        fixed(),
+        color(150, 150, 150),
+      ]) as GameObj;
+      uiElements.push(characterCounter);
 
-    promptText = add([
-      text('Press ENTER to submit', { size: 18 }),
-      pos(CENTRE_X, height() - 100),
-      anchor('center'),
-      z(11),
-      fixed(),
-      color(255, 255, 255),
-    ]) as GameObj;
-    uiElements.push(promptText);
+      promptText = add([
+        text('Press ENTER to submit', { size: 18 }),
+        pos(CENTRE_X, height() - 100),
+        anchor('center'),
+        z(11),
+        fixed(),
+        color(255, 255, 255),
+      ]) as GameObj;
+      uiElements.push(promptText);
+    } else {
+      // Mobile: show button to trigger HTML input overlay
+      const submitButton = add([
+        rect(280, 60, { radius: 8 }),
+        pos(CENTRE_X, 300),
+        anchor('center'),
+        z(11),
+        fixed(),
+        color(100, 200, 100),
+        area(),
+        'submitButton',
+      ]) as GameObj;
+      uiElements.push(submitButton);
 
-    // Handle alphanumeric input
-    const alphanumeric = 'abcdefghijklmnopqrstuvwxyz0123456789'.split('');
-    alphanumeric.forEach((char) => {
-      const handler = onKeyPress(char, () => {
-        if (phase === 'input' && playerName.length < MAX_NAME_LENGTH) {
-          playerName += char;
+      const submitButtonText = add([
+        text('ENTER NAME', { size: 24 }),
+        pos(CENTRE_X, 300),
+        anchor('center'),
+        z(12),
+        fixed(),
+        color(255, 255, 255),
+      ]) as GameObj;
+      uiElements.push(submitButtonText);
+
+      submitButton.onClick(() => {
+        if (onRequestMobileInput) {
+          onRequestMobileInput((name: string) => {
+            playerName = name;
+            submitPlayerScore(finalDepth, score, runTimeMs);
+          });
+        }
+      });
+    }
+
+    // Handle alphanumeric input (desktop only)
+    if (!isMobile) {
+      const alphanumeric = 'abcdefghijklmnopqrstuvwxyz0123456789'.split('');
+      alphanumeric.forEach((char) => {
+        const handler = onKeyPress(char, () => {
+          if (phase === 'input' && playerName.length < MAX_NAME_LENGTH) {
+            playerName += char;
+            updateInputDisplay();
+          }
+        });
+        keyPressHandlers.push(handler);
+      });
+
+      // Handle backspace
+      const backspaceHandler = onKeyPress('backspace', () => {
+        if (phase === 'input' && playerName.length > 0) {
+          playerName = playerName.slice(0, -1);
           updateInputDisplay();
         }
       });
-      keyPressHandlers.push(handler);
-    });
+      keyPressHandlers.push(backspaceHandler);
 
-    // Handle backspace
-    const backspaceHandler = onKeyPress('backspace', () => {
-      if (phase === 'input' && playerName.length > 0) {
-        playerName = playerName.slice(0, -1);
-        updateInputDisplay();
-      }
-    });
-    keyPressHandlers.push(backspaceHandler);
-
-    // Handle enter - submit or restart
-    const enterHandler = onKeyPress('enter', async () => {
-      if (phase === 'input') {
-        await submitPlayerScore(finalDepth, score, runTimeMs);
-      } else if (phase === 'success' || phase === 'error') {
-        onRestart();
-      }
-    });
-    keyPressHandlers.push(enterHandler);
+      // Handle enter - submit or restart
+      const enterHandler = onKeyPress('enter', async () => {
+        if (phase === 'input') {
+          await submitPlayerScore(finalDepth, score, runTimeMs);
+        } else if (phase === 'success' || phase === 'error') {
+          onRestart();
+        }
+      });
+      keyPressHandlers.push(enterHandler);
+    }
 
     // Animation loop
     updateHandler = onUpdate(() => {
@@ -290,7 +329,6 @@ function gameOverController({ k, onRestart }: Args) {
       } catch (err) {
         phase = 'error';
         showError();
-        // eslint-disable-next-line no-console
         console.error('Submit score failed', err);
       }
     }
@@ -353,32 +391,104 @@ function gameOverController({ k, onRestart }: Args) {
       }
       uiElements.push(statusText);
 
-      promptText = add([
-        text('Press ENTER to return to menu', { size: 18 }),
-        pos(CENTRE_X, height() - 100),
-        anchor('center'),
-        z(11),
-        fixed(),
-        color(255, 255, 255),
-      ]) as GameObj;
-      uiElements.push(promptText);
+      if (isMobile) {
+        // Mobile: show restart button
+        const restartButton = add([
+          rect(280, 60, { radius: 8 }),
+          pos(CENTRE_X, height() - 100),
+          anchor('center'),
+          z(11),
+          fixed(),
+          color(100, 150, 255),
+          area(),
+          'restartButton',
+        ]) as GameObj;
+        uiElements.push(restartButton);
+
+        promptText = add([
+          text('RETURN TO MENU', { size: 24 }),
+          pos(CENTRE_X, height() - 100),
+          anchor('center'),
+          z(12),
+          fixed(),
+          color(255, 255, 255),
+        ]) as GameObj;
+        uiElements.push(promptText);
+
+        restartButton.onClick(() => {
+          onRestart();
+        });
+      } else {
+        // Desktop: show keyboard prompt
+        promptText = add([
+          text('Press ENTER to return to menu', { size: 18 }),
+          pos(CENTRE_X, height() - 100),
+          anchor('center'),
+          z(11),
+          fixed(),
+          color(255, 255, 255),
+        ]) as GameObj;
+        uiElements.push(promptText);
+      }
     }
 
     function showError() {
       if (statusText) destroy(statusText);
 
-      statusText = add([
-        text('Failed to submit score.\nPress ENTER to return to menu.', {
-          size: 20,
-          align: 'center',
-        }),
-        pos(CENTRE_X, 330),
-        anchor('center'),
-        z(11),
-        fixed(),
-        color(255, 100, 100), // Red
-      ]) as GameObj;
-      uiElements.push(statusText);
+      if (isMobile) {
+        statusText = add([
+          text('Failed to submit score.', {
+            size: 20,
+            align: 'center',
+          }),
+          pos(CENTRE_X, 280),
+          anchor('center'),
+          z(11),
+          fixed(),
+          color(255, 100, 100), // Red
+        ]) as GameObj;
+        uiElements.push(statusText);
+
+        // Mobile: show restart button
+        const restartButton = add([
+          rect(280, 60, { radius: 8 }),
+          pos(CENTRE_X, height() - 100),
+          anchor('center'),
+          z(11),
+          fixed(),
+          color(100, 150, 255),
+          area(),
+          'restartButton',
+        ]) as GameObj;
+        uiElements.push(restartButton);
+
+        const restartButtonText = add([
+          text('RETURN TO MENU', { size: 24 }),
+          pos(CENTRE_X, height() - 100),
+          anchor('center'),
+          z(12),
+          fixed(),
+          color(255, 255, 255),
+        ]) as GameObj;
+        uiElements.push(restartButtonText);
+
+        restartButton.onClick(() => {
+          onRestart();
+        });
+      } else {
+        statusText = add([
+          text('Failed to submit score.\nPress ENTER to return to menu.', {
+            size: 20,
+            align: 'center',
+          }),
+          pos(CENTRE_X, 330),
+          anchor('center'),
+          z(11),
+          fixed(),
+          color(255, 100, 100), // Red
+        ]) as GameObj;
+        uiElements.push(statusText);
+      }
     }
   };
 

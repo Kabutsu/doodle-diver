@@ -3,6 +3,7 @@ import type { ActiveMask } from '../mask-controller';
 
 type Args = {
   k: KAPLAYCtx;
+  isMobile?: boolean;
   getDepth: () => number;
   getOxygen: () => number;
   getActiveMask?: () => ActiveMask;
@@ -15,33 +16,39 @@ type Args = {
   getPlayerPos?: () => { x: number; y: number };
 };
 
-function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickState }: Args) {
+function hudController({ k, isMobile = false, getDepth, getOxygen, getActiveMask, getBoostKickState }: Args) {
   const { add, text, pos, rect, color, opacity, z, fixed, onUpdate, destroy, width, height, anchor } = k;
 
+  // Adjust positioning and sizing based on platform
+  const labelSize = isMobile ? 16 : 24;
+  const centerX = width() / 2;
+
   const depthLabel = add([
-    text('Depth: 0m'),
-    pos(8, 8),
+    text('Depth: 0m', { size: labelSize }),
+    pos(isMobile ? 8 : 8, 8),
     z(10),
     fixed(),
   ]) as GameObj;
 
   const oxygenLabel = add([
-    text('O2: 100%'),
-    pos(8, 50),
+    text('O2: 100%', { size: labelSize }),
+    pos(isMobile ? centerX : 8, isMobile ? 8 : 50),
+    anchor(isMobile ? 'top' : 'topleft'),
     z(10),
     fixed(),
   ]) as GameObj;
 
   const maskLabel = add([
-    text(''),
-    pos(8, 92),
+    text('', { size: labelSize }),
+    pos(isMobile ? width() - 8 : 8, isMobile ? 8 : 92),
+    anchor(isMobile ? 'topright' : 'topleft'),
     z(10),
     fixed(),
   ]) as GameObj;
 
   const boostKickLabel = add([
-    text('', { size: 20 }),
-    pos(width() - 10, 10),
+    text('', { size: isMobile ? 16 : 20 }),
+    pos(width() - 10, isMobile ? 30 : 10),
     anchor('topright'),
     z(10),
     fixed(),
@@ -110,6 +117,65 @@ function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickStat
     ]) as GameObj);
   }
 
+  // Touch feedback overlays for mobile (visible down to mid-depth ~750m)
+  const touchOverlays: GameObj[] = [];
+  
+  if (isMobile) {
+    const lowerThirdY = height() * 0.67;
+    const leftThird = width() / 3;
+    const rightThird = width() * 2 / 3;
+    
+    // Left side overlay
+    touchOverlays.push(add([
+      rect(width() / 2, lowerThirdY),
+      pos(0, 0),
+      color(100, 150, 255),
+      opacity(0),
+      z(7),
+      fixed(),
+    ]) as GameObj);
+    
+    // Right side overlay
+    touchOverlays.push(add([
+      rect(width() / 2, lowerThirdY),
+      pos(width() / 2, 0),
+      color(100, 150, 255),
+      opacity(0),
+      z(7),
+      fixed(),
+    ]) as GameObj);
+    
+    // Lower-left diagonal overlay
+    touchOverlays.push(add([
+      rect(leftThird, height() - lowerThirdY),
+      pos(0, lowerThirdY),
+      color(150, 100, 255),
+      opacity(0),
+      z(7),
+      fixed(),
+    ]) as GameObj);
+    
+    // Lower-center down overlay
+    touchOverlays.push(add([
+      rect(rightThird - leftThird, height() - lowerThirdY),
+      pos(leftThird, lowerThirdY),
+      color(255, 150, 100),
+      opacity(0),
+      z(7),
+      fixed(),
+    ]) as GameObj);
+    
+    // Lower-right diagonal overlay
+    touchOverlays.push(add([
+      rect(width() - rightThird, height() - lowerThirdY),
+      pos(rightThird, lowerThirdY),
+      color(150, 100, 255),
+      opacity(0),
+      z(7),
+      fixed(),
+    ]) as GameObj);
+  }
+
   let isCleanedUp = false;
 
   onUpdate(() => {
@@ -123,6 +189,15 @@ function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickStat
     const depthProgress = Math.min(depth / maxDepth, 1);
     const darknessOpacity = depthProgress * depthProgress * 0.9; // Exponential curve
     depthDarknessOverlay.opacity = darknessOpacity;
+
+    // Update touch feedback overlays (fade out from 0-750m depth)
+    if (isMobile) {
+      const midDepth = 750;
+      const touchOpacity = Math.max(0, 1 - (depth / midDepth)) * 0.15;
+      touchOverlays.forEach(overlay => {
+        overlay.opacity = touchOpacity;
+      });
+    }
 
     const mask = getActiveMask?.() ?? null;
     const now = performance.now();
@@ -183,6 +258,7 @@ function hudController({ k, getDepth, getOxygen, getActiveMask, getBoostKickStat
     destroy(boostKickLabel);
     destroy(depthDarknessOverlay);
     vignetteRects.forEach(rect => destroy(rect));
+    touchOverlays.forEach(overlay => destroy(overlay));
   };
 
   return { cleanup };
