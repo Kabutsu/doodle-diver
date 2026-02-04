@@ -11,6 +11,7 @@ type Args = {
   isMobile?: boolean;
   onRequestMobileInput?: (callback: (name: string) => void) => void;
   onRestart: () => void;
+  onQuickRestart?: () => void;
 };
 
 type LeaderboardEntry = {
@@ -23,7 +24,7 @@ type LeaderboardResponse = {
   rows: LeaderboardEntry[];
 };
 
-function gameOverController({ k, isMobile = false, onRequestMobileInput, onRestart }: Args) {
+function gameOverController({ k, isMobile = false, onRequestMobileInput, onRestart, onQuickRestart }: Args) {
   const { add, text, pos, fixed, z, width, height, onKeyPress, onUpdate, destroy, rect, color, opacity, anchor, dt, area } = k;
 
   const CENTRE_X = width() / 2;
@@ -168,6 +169,7 @@ function gameOverController({ k, isMobile = false, onRequestMobileInput, onResta
       uiElements.push(submitButtonText);
 
       let isButtonDisabled = false;
+      let isPlayAgainDisabled = false;
 
       submitButton.onClick(() => {
         if (onRequestMobileInput && !isButtonDisabled) {
@@ -182,6 +184,68 @@ function gameOverController({ k, isMobile = false, onRequestMobileInput, onResta
             destroy(submitButtonText);
             submitPlayerScore(finalDepth, score, runTimeMs);
           });
+        }
+      });
+
+      // Mobile: quick restart button (background submit with date name)
+      const playAgainButton = add([
+        rect(280, 60, { radius: 8 }),
+        pos(CENTRE_X, 380),
+        anchor('center'),
+        z(11),
+        fixed(),
+        color(100, 150, 255),
+        area(),
+        'playAgainButton',
+      ]) as GameObj;
+      uiElements.push(playAgainButton);
+
+      const playAgainButtonText = add([
+        text('PLAY AGAIN', { size: 24 }),
+        pos(CENTRE_X, 380),
+        anchor('center'),
+        z(12),
+        fixed(),
+        color(255, 255, 255),
+      ]) as GameObj;
+      uiElements.push(playAgainButtonText);
+
+      function formatDateDDMMYYYY(d: Date) {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = String(d.getFullYear());
+        return `${dd}/${mm}/${yyyy}`;
+      }
+
+      playAgainButton.onClick(() => {
+        if (phase === 'input' && !isPlayAgainDisabled) {
+          isPlayAgainDisabled = true;
+          // Gray out button to indicate action taken
+          playAgainButton.color = k.rgb(80, 80, 80);
+          playAgainButtonText.color = k.rgb(150, 150, 150);
+
+          const finalPlayerName = formatDateDDMMYYYY(new Date());
+          const payload = {
+            player: finalPlayerName,
+            score,
+            depth: finalDepth,
+            runTimeMs,
+          };
+
+          // Fire-and-forget submission; don't block restart
+          submitScore(payload).catch((err) => {
+            console.error('Background submit failed', err);
+          });
+
+          // Cleanup game over UI and immediately restart
+          cleanup();
+          setTimeout(() => {
+            if (onQuickRestart) {
+              onQuickRestart();
+            } else {
+              onRestart();
+            }
+          }, 0);
         }
       });
     }

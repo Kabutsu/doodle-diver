@@ -106,6 +106,13 @@ const GameCanvas = () => {
             setMobileInputCallback(() => callback);
             setMobileInputVisible(true);
           },
+          onQuickRestart: () => {
+            // Cleanup current game state and start a fresh run
+            gameCleanup?.();
+            gameCleanup = undefined;
+            setGameState('playing');
+            startGame(kCtx);
+          },
           onRestart: () => {
             // Cleanup game
             gameCleanup?.();
