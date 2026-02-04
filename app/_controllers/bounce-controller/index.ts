@@ -41,6 +41,7 @@ export default function bounceController({
   } = k;
 
   let isCleanedUp = false;
+  let updateEvent: { cancel: () => void } | null = null;
 
   // Collision handlers
   onCollide(JELLYFISH_TAG, PLAYER_TAG, (b, p) => {
@@ -67,7 +68,7 @@ export default function bounceController({
   });
 
   // Update loop - move helper objects
-  onUpdate(() => {
+  updateEvent = onUpdate(() => {
     if (isCleanedUp) return;
 
     const dt = k.dt();
@@ -91,6 +92,10 @@ export default function bounceController({
 
   const cleanup = () => {
     isCleanedUp = true;
+    if (updateEvent) {
+      updateEvent.cancel();
+      updateEvent = null;
+    }
   };
 
   return { cleanup };

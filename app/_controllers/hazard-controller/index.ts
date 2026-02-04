@@ -15,8 +15,6 @@ const ROCK_DAMAGE = 8;
 const MINE_DAMAGE = 20;
 const FISH_DAMAGE = 6;
 const MINE_DEBUFF_MS = 2500;
-const HIGH_SPEED_THRESHOLD = 25;
-const HIGH_SPEED_EXTRA = 5;
 
 const DESTROY = 'hazard_DESTROY';
 
@@ -49,6 +47,7 @@ export default function hazardController({
   } = k;
 
   let isCleanedUp = false;
+  let updateEvent: { cancel: () => void } | null = null;
 
   // Collision handlers
   onCollide(ROCK_TAG, PLAYER_TAG, (b, p) => {
@@ -70,18 +69,14 @@ export default function hazardController({
 
   onCollide(FISH_TAG, PLAYER_TAG, (b, p) => {
     const h = p as GameObj<HealthComp>;
-    const fallSpeed = getFallSpeed();
     h.hurt(FISH_DAMAGE);
     k.shake(4);
     k.play('hazard-thud', { volume: 0.6 });
-    if (fallSpeed > HIGH_SPEED_THRESHOLD) {
-      h.hurt(HIGH_SPEED_EXTRA);
-    }
     b.destroy();
   });
 
   // Update loop - handle movement and current effects
-  onUpdate(() => {
+  updateEvent = onUpdate(() => {
     if (isCleanedUp) return;
 
     const dt = k.dt();
@@ -224,6 +219,10 @@ export default function hazardController({
 
   const cleanup = () => {
     isCleanedUp = true;
+    if (updateEvent) {
+      updateEvent.cancel();
+      updateEvent = null;
+    }
   };
 
   return { cleanup };

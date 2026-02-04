@@ -279,7 +279,8 @@ function playerController({ k, isMobile = false, onOxygenDepleted, getActiveMask
     return 1;
   }
 
-  onUpdate(() => {
+  let updateEvent: { cancel: () => void } | null = null;
+  updateEvent = onUpdate(() => {
     if (isGameOver) return;
 
     gameReady = true;
@@ -423,6 +424,24 @@ function playerController({ k, isMobile = false, onOxygenDepleted, getActiveMask
 
   const cleanup = () => {
     destroyAll(PLAYER_TAG);
+    lastFallSpeed = BASE_FALL_SPEED;
+    boostKickCooldownUntil = 0;
+    boostKickDurationUntil = 0;
+    // Cancel update loop to avoid lingering handlers
+    if (updateEvent) {
+      updateEvent.cancel();
+      updateEvent = null;
+    }
+    // Reset transient movement state
+    bounceVy = 0;
+    bounceVx = 0;
+    currentVx = 0;
+    slowDebuffUntil = 0;
+    activeBounceUntil = 0;
+    bounceType = null;
+    flashUntil = 0;
+    isBoosting = false;
+    isKicking = false;
   };
 
   return {

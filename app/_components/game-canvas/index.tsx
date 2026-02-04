@@ -9,8 +9,9 @@ import hudController from '@/app/_controllers/hud-controller';
 import maskController, { type MaskControllerReturn } from '@/app/_controllers/mask-controller';
 import playerController from '@/app/_controllers/player-controller';
 import titleScreenController from '@/app/_controllers/title-screen-controller';
-import type { KAPLAYCtx } from 'kaplay';
+import type { AudioPlay, KAPLAYCtx } from 'kaplay';
 import { isMobile, isIOS } from '@/app/_helpers/platform-detection';
+import * as tags from '@/app/_helpers/tags';
 
 const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -63,7 +64,7 @@ const GameCanvas = () => {
       
       // Start background music (full volume for title screen)
       // On iOS, we need to wait for user interaction before playing audio
-      let bgMusic: any = null;
+      let bgMusic: AudioPlay | null = null;
       const iOS = isIOS();
       
       if (!iOS) {
@@ -136,6 +137,9 @@ const GameCanvas = () => {
 
         const gameDirectorRef: { current: GameDirectorReturn | null } = { current: null };
         const maskCtrlRef: { current: MaskControllerReturn | null } = { current: null };
+        let oxygenCtrl: ReturnType<typeof oxygenTankController> | null = null;
+        let bounceCtrl: ReturnType<typeof bounceController> | null = null;
+        let hazardCtrl: ReturnType<typeof hazardController> | null = null;
 
         const playerCtrl = playerController({
           k: kCtx,
@@ -165,19 +169,19 @@ const GameCanvas = () => {
           getFallSpeed: playerCtrl.getFallSpeed,
         });
 
-        oxygenTankController({ 
+        oxygenCtrl = oxygenTankController({ 
           k: kCtx,
           getFallSpeed: playerCtrl.getFallSpeed,
         });
 
-        bounceController({
+        bounceCtrl = bounceController({
           k: kCtx,
           setBounceVy: playerCtrl.setBounceVy,
           setBounceVx: playerCtrl.setBounceVx,
           getFallSpeed: playerCtrl.getFallSpeed,
         });
 
-        hazardController({
+        hazardCtrl = hazardController({
           k: kCtx,
           player: playerCtrl.player,
           setSlowDebuffUntil: playerCtrl.setSlowDebuffUntil,
@@ -196,11 +200,43 @@ const GameCanvas = () => {
           getPlayerPos: () => playerCtrl.getPlayerPos(),
         });
 
+        const destroyActiveObjects = () => {
+          // Wipe all active gameplay objects to ensure a clean scene on restart
+          const tagsToDestroy = [
+            tags.ROCK_TAG,
+            tags.MINE_TAG,
+            tags.FISH_TAG,
+            tags.CURRENT_TAG,
+            'current_arrow',
+            'current_particle',
+            tags.SIDE_WALL_TAG,
+            tags.JELLYFISH_TAG,
+            tags.AIR_VENT_TAG,
+            tags.SHARP_ROCK_TAG,
+            tags.OXYGEN_TANK_TAG,
+            tags.MASK_PICKUP_TAG,
+          ];
+          tagsToDestroy.forEach((t) => kCtx.destroyAll(t));
+        };
+
         gameCleanup = () => {
+          // Cancel update loops first
+          hazardCtrl?.cleanup();
+          oxygenCtrl?.cleanup();
+          bounceCtrl?.cleanup();
+          maskCtrlRef.current?.cleanup();
           gameDirectorRef.current?.cleanup();
+          // Cleanup UI/controllers
           playerCtrl.cleanup();
           hudCtrl.cleanup();
           gameOverCtrl.cleanup();
+          // Ensure scene is clean
+          destroyActiveObjects();
+          oxygenCtrl = null;
+          bounceCtrl = null;
+          hazardCtrl = null;
+          maskCtrlRef.current = null;
+          gameDirectorRef.current = null;
         };
       };
 

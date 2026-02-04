@@ -22,6 +22,7 @@ export default function maskController({ k, gameDirector, getFallSpeed }: Args) 
 
   let activeMask: ActiveMask = null;
   let isCleanedUp = false;
+  let updateEvent: { cancel: () => void } | null = null;
 
   // Collision handler - pick up mask
   onCollide(MASK_PICKUP_TAG, PLAYER_TAG, (pickup, _p) => {
@@ -35,7 +36,7 @@ export default function maskController({ k, gameDirector, getFallSpeed }: Args) 
   });
 
   // Update loop - check mask expiration and move pickups
-  onUpdate(() => {
+  updateEvent = onUpdate(() => {
     if (isCleanedUp) return;
     
     const now = performance.now();
@@ -62,6 +63,10 @@ export default function maskController({ k, gameDirector, getFallSpeed }: Args) 
   const cleanup = () => {
     isCleanedUp = true;
     activeMask = null;
+    if (updateEvent) {
+      updateEvent.cancel();
+      updateEvent = null;
+    }
   };
 
   return { getActiveMask, cleanup };

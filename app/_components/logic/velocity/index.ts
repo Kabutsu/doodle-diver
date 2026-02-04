@@ -8,7 +8,9 @@ export interface VelocityComp extends Comp {
 }
 
 export default function velocity(bounds: [number, number] = DEFAULT_BOUNDS): VelocityComp {
-  const [min, max] = bounds.sort();
+  // Avoid mutating the incoming bounds; derive min/max safely
+  const min = Math.min(bounds[0], bounds[1]);
+  const max = Math.max(bounds[0], bounds[1]);
   let speedY = min + (Math.random() * (max - min));
   let speedMultiplier = 1;
 

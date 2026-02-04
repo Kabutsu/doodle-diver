@@ -26,6 +26,7 @@ export default function oxygenTankController({ k, getFallSpeed }: Args) {
   } = k;
 
   let isCleanedUp = false;
+  let updateEvent: { cancel: () => void } | null = null;
 
   // Collision handlers
   onCollide(OXYGEN_TANK_TAG, PLAYER_TAG, (b, p) => {
@@ -39,7 +40,7 @@ export default function oxygenTankController({ k, getFallSpeed }: Args) {
   });
 
   // Update loop - move oxygen tanks
-  onUpdate(() => {
+  updateEvent = onUpdate(() => {
     if (isCleanedUp) {
       return;
     }
@@ -67,6 +68,10 @@ export default function oxygenTankController({ k, getFallSpeed }: Args) {
 
   const cleanup = () => {
     isCleanedUp = true;
+    if (updateEvent) {
+      updateEvent.cancel();
+      updateEvent = null;
+    }
   };
 
   return { cleanup };

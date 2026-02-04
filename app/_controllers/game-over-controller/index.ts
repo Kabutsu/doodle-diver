@@ -188,7 +188,7 @@ function gameOverController({ k, isMobile = false, onRequestMobileInput, onResta
 
     // Handle alphanumeric input (desktop only)
     if (!isMobile) {
-      const alphanumeric = 'abcdefghijklmnopqrstuvwxyz0123456789'.split('');
+      const alphanumeric = 'abcdefghijklmnopqrstuvwxyz0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
       alphanumeric.forEach((char) => {
         const handler = onKeyPress(char, () => {
           if (phase === 'input' && playerName.length < MAX_NAME_LENGTH) {
